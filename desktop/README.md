@@ -9,7 +9,7 @@
 3. Download the **B1-Gong-Dak-PC.exe** artifact from the successful [Desktop real-AI adapter CI run](https://github.com/glojournal-cmyk/b1-gong-dak/actions/workflows/desktop-qa.yml). Extract the ZIP and double-click the EXE; it launches a *local-only* server and opens the browser. This is an **unsigned GitHub test build** — Windows SmartScreen may warn; verify the GitHub source before running.
 4. Check the Chrome page at **http://127.0.0.1:8765** shows **AI 已就緒**. Choose a topic and press **開始對話**.
 
-**Alternative for developers:** Install [Python 3 for Windows](https://www.python.org/downloads/windows/), download this repository, open PowerShell in the repository root, and run `py -3 desktop\server.py`. This is also completely free and uses no third-party Python packages.
+**Alternative if the EXE artifact is not ready:** Install [Python 3 for Windows](https://www.python.org/downloads/windows/), download this repository and double-click `desktop\START-B1-PC.cmd`. For developers: `py -3 desktop\server.py`. This is also completely free and uses no third-party Python packages.
 
 The app runs **on your PC**, not inside GitHub/Vercel. Close the terminal to stop it. Model inference is local and does not incur usage-based AI API charges (downloads and electricity still apply). Do not expose the local server to the Internet.
 
