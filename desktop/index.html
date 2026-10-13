@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>B1 講得掂｜電腦版真正 AI 對話</title><link rel="stylesheet" href="/styles.css"></head>
+<body><div class="app">
+<header class="top"><div class="brand"><div class="logo">B<span>1</span></div><div><strong>B1 講得掂</strong><small>English Conversation Coach</small></div></div><span class="chip">PC · 本機 AI 實測</span></header>
+<main class="workspace">
+<aside class="side"><div class="eyebrow">YOUR PRACTICE</div><h1>由幾個字，<br><em>慢慢講成一句。</em></h1><p class="intro">真正 AI 回答你講嘅內容，唔係固定句型。先喺電腦測試完整英文對話。</p><div class="status" id="status" role="status"><span class="dot"></span><span id="status-text">正在檢查本機 AI…</span></div>
+<label for="topic">練習主題</label><select id="topic"><option>My family</option><option>My work</option><option>My life in the UK</option><option>Festivals</option><option>Means of Transport</option><option>Special Occasions</option><option>Entertainment</option><option>Music</option><option>Recent Personal Experiences</option></select>
+<label for="mode">對話模式</label><select id="mode"><option value="coach">Coach · 引導完整句子</option><option value="exam">Exam · 模擬考官</option></select>
+<div class="facts"><label for="facts">已確認嘅個人資料（可選）</label><textarea id="facts" rows="3" maxlength="2000" placeholder="例如：I have one daughter. She is 13 years old."></textarea><p>只根據已確認嘅資料建議句子，唔亂估年齡、工作或家庭背景。</p><button id="save-facts" class="secondary">儲存個人資料</button></div>
+</aside>
+<section class="chat-area" aria-label="AI 對話練習"><div class="chat-head"><div><div class="eyebrow">LIVE DIALOGUE</div><h2>English Speaking Practice</h2><p>先驗證 AI 嘅理解、追問同記憶，再加 Samsung 語音。</p></div><button id="new-chat" class="secondary">↻ 新對話</button></div>
+<div id="chat" class="chat" aria-live="polite"><div class="intro-card">等本機 AI 顯示「已就緒」，按「開始對話」，考官就會根據主題真正生成問題。<br><strong>呢版仲係文字對話，未有咪高峰。</strong></div></div>
+<form id="chat-form" class="composer"><div class="composer-label"><label for="message">你想點回答／反問？</label><span id="typing-status">等候本機模型</span></div><textarea id="message" rows="2" maxlength="1200" placeholder="例如：One daughter. / Can you make it more specific?"></textarea><div class="actions"><button id="start" type="button" class="secondary">開始對話</button><button id="send" type="submit" class="primary">發送 →</button></div><div class="hint">Enter 發送；Shift+Enter 換行。呢個係測試版，AI 回答需要人手驗收。</div></form>
+</section></main><footer><span>PRIVATE TEST · 無付費 AI API · 對話保存在呢部電腦</span><button id="export" class="ghost">匯出對話紀錄</button></footer></div><script src="/app.js" defer></script></body></html>
