@@ -5,6 +5,8 @@ import os
 import pathlib
 import urllib.error
 import urllib.request
+import threading
+import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
@@ -122,6 +124,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     with ThreadingHTTPServer(('127.0.0.1', PORT), Handler) as host:
         print(f'B1 local desktop coach: http://127.0.0.1:{PORT}\nModel: {MODEL} via Ollama. Ctrl+C to stop.')
+        threading.Timer(1.0, lambda: webbrowser.open(f'http://127.0.0.1:{PORT}')).start()
         host.serve_forever()
 
 if __name__ == '__main__':
