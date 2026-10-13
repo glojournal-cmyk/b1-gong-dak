@@ -21,3 +21,14 @@
 - Live website hosting not yet configured; separate GitHub repository cannot be created with the current connected GitHub actions.
 
 This is a scripted roleplay MVP, not an AI language model or an official Trinity grade prediction.
+
+
+## v0.2 regression — user-reported off-topic issue
+- Reported: saying `can you hear me what I say` during a family question produced unrelated `I have one daughter.` suggestion.
+- Fixed: recognise mic/understanding checks, acknowledge recognised text, and suggest `Can you hear what I'm saying?` without claiming generative comprehension.
+- Unsupported answer now explicitly states lack of understanding, provides retry and optional sample, rather than falsely proposing a personal answer.
+- Correct `one daughter` -> ask daughter's age -> `13` -> `My daughter is 13 years old.`
+- Contextual family follow-up for `church with family` now asks why the learner enjoys going to church.
+- Answer panel remains accessible at mobile width; mobile 390 × 844 simulated Chromium flow passed without JS errors or horizontal overflow.
+- Service worker uses network-first update and offline cache fallback to reduce installed-PWA stale code.
+- Real Samsung browser speech recognition + microphone/audio playback still require device testing; simulated Chromium does **not** verify these.
