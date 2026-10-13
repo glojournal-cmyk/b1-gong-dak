@@ -1,0 +1,42 @@
+'use strict';
+// Objective drills: score explicit exercises, never infer a B1 grade from transcripts.
+const courses = [
+{words:[['daughter','女兒','I have one daughter.'],['family','家庭','My family lives in the UK.'],['together','一齊','We eat together.'],['weekend','週末','I see my family at the weekend.']],bad:'I has one daughter.',good:['I have one daughter.'],why:'主語 I 要配 have；has 用於 he / she / it。',build:'I have one daughter.'},
+{words:[['because','因為','I cook because it helps me relax.'],['usually','通常','I usually cook at home.'],['enjoy','享受／鍾意','I enjoy cooking.'],['relax','放鬆','Music helps me relax.']],bad:'I enjoy cook.',good:['I enjoy cooking.'],why:'enjoy 後面接動詞時要用 -ing：enjoy cooking。',build:'I enjoy cooking because it helps me relax.'},
+{words:[['since','自從','I have lived here since 2023.'],['for','長達（一段時間）','I have lived here for three years.'],['recently','最近','I have recently started a course.'],['already','已經','I have already finished my work.']],bad:'I have lived here since three years.',good:['I have lived here for three years.'],why:'for + 一段時間（three years）；since + 起點（2023）。',build:'I have lived here for three years.'},
+{words:[['prefer','較喜歡','I prefer travelling by train.'],['reason','原因','The main reason is comfort.'],['often','經常','We often travel together.'],['comfortable','舒適','The train is comfortable.']],bad:'I prefer travel by train.',good:['I prefer travelling by train.','I prefer traveling by train.','I prefer to travel by train.'],why:'prefer 後可用 -ing 或 to + 動詞：prefer travelling / prefer to travel。',build:'I prefer travelling by train because it is comfortable.'},
+{words:[['experience','經歷','It was a memorable experience.'],['memorable','難忘','It was a memorable day.'],['learnt','學識（過去式）','I learnt something new.'],['future','將來','I will travel more in the future.']],bad:'Last year I learn something new.',good:['Last year I learnt something new.','Last year I learned something new.'],why:'Last year 係過去時間，要用過去式 learnt / learned。',build:'Last year I learnt something new.'}
+];
+const learningKey='b1-gongdak-drills-v1';
+let learning={units:{},mistakes:[]};
+try{const s=JSON.parse(localStorage.getItem(learningKey)||'{}');if(s&&s.units&&typeof s.units==='object'&&!Array.isArray(s.units))learning.units=s.units;if(Array.isArray(s.mistakes))learning.mistakes=s.mistakes.filter(x=>x&&typeof x.prompt==='string'&&typeof x.answer==='string').slice(-100)}catch{}
+function persistLearning(){try{localStorage.setItem(learningKey,JSON.stringify(learning));el('learning-save').textContent='練習紀錄已儲存'}catch{el('learning-save').textContent='未能儲存；請下載備份保留今次紀錄'}}
+function normalAnswer(s){return String(s).toLowerCase().replace(/[’‘]/g,"'").replace(/[.,!?;:]/g,'').replace(/\s+/g,' ').trim()}
+function unitRecord(){const id=String(state.level);const r=learning.units[id];if(!r||!Array.isArray(r.passed)||!Array.isArray(r.first))learning.units[id]={passed:[],first:[],attempts:0};return learning.units[id]}
+function node(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n}
+function action(text,fn,cls='outline'){const b=node('button',text,cls);b.type='button';b.addEventListener('click',fn);return b}
+function updateLearningScore(){const r=unitRecord();const mastered=new Set(r.passed.filter(x=>Number.isInteger(x)&&x>=0&&x<6)).size;el('learning-score').textContent=`今課掌握 ${mastered} / 6 · 首次答對 ${r.first.filter(x=>x===true).length} / ${r.first.filter(x=>typeof x==='boolean').length}`;el('complete').disabled=mastered<6;el('complete').textContent=mastered<6?'先完成六題練習':state.level===4?'完成五課練習':'完成今課，下一課 →'}
+function renderLearning(){
+ const c=courses[state.level];el('vocabulary').replaceChildren();el('drills').replaceChildren();
+ c.words.forEach(([word,zh,example])=>{const box=node('div',undefined,'word-card');box.append(node('strong',word),node('span',zh),node('p',example),action('🔊 聽讀音',()=>readAloud(word+'. '+example)));el('vocabulary').append(box)});
+ const exercises=c.words.map(([word,zh])=>({prompt:`寫出「${zh}」嘅英文（今課生字）`,answers:[word],why:`${word} = ${zh}。例句：${c.words.find(w=>w[0]===word)[2]}`}));
+ exercises.push({prompt:`改正呢句：${c.bad}`,answers:c.good,why:c.why});
+ // Fixed word-order task has a constrained target; free speaking is assessed separately.
+ exercises.push({prompt:`用以下全部字詞砌成一句：${c.build.replace(/[.]/g,'').split(' ').reverse().join(' / ')}`,answers:[c.build],why:`主語 → 動詞 → 其他資料：${c.build}`});
+ exercises.forEach((e,i)=>{
+   const box=node('div',undefined,'drill');const label=node('label',`${i+1}. ${e.prompt}`);const input=node('input');input.id=`drill-${i}`;input.autocomplete='off';input.setAttribute('autocapitalize','none');input.spellcheck=false;input.maxLength=250;label.htmlFor=input.id;
+   const feedback=node('p',undefined,'drill-feedback');feedback.setAttribute('role','status');
+   const check=()=>{const answer=input.value.trim();if(!answer){feedback.textContent='請先回答。';return}const r=unitRecord();const ok=e.answers.some(v=>normalAnswer(v)===normalAnswer(answer));if(typeof r.first[i]!=='boolean')r.first[i]=ok;r.attempts++;if(ok){if(!r.passed.includes(i))r.passed.push(i);feedback.textContent='✓ 正確。'+e.why;feedback.className='drill-feedback correct';learning.mistakes=learning.mistakes.filter(m=>m.unit!==state.level||m.index!==i)}else{feedback.textContent=`再試一次。正確示例：${e.answers[0]} ${e.why}`;feedback.className='drill-feedback retry';if(!learning.mistakes.some(m=>m.unit===state.level&&m.index===i))learning.mistakes.push({unit:state.level,index:i,prompt:e.prompt,answer:e.answers[0],why:e.why})}persistLearning();updateLearningScore();renderReview()};
+   input.addEventListener('keydown',ev=>{if(ev.key==='Enter')check()});
+   if(unitRecord().passed.includes(i))feedback.textContent='✓ 之前已掌握；可以再答一次複習。';
+   box.append(label,input,action('檢查答案',check,'primary'),feedback);el('drills').append(box);
+ });
+ updateLearningScore();renderReview();el('learning-save').textContent='';
+}
+function renderReview(){el('review-list').replaceChildren();if(!learning.mistakes.length){el('review-list').append(node('p','暫時冇未解決錯題。答錯嘅題目會自動加入。'));return}learning.mistakes.forEach(m=>{const box=node('div',undefined,'drill');const label=node('label',m.prompt);const input=node('input');input.id=`review-${m.unit}-${m.index}`;label.htmlFor=input.id;input.maxLength=250;const f=node('p',undefined,'drill-feedback');f.setAttribute('role','status');box.append(label,input,action('重溫檢查',()=>{const e=courses[m.unit];const accepted=m.index===4?e.good:[m.answer];if(accepted.some(a=>normalAnswer(a)===normalAnswer(input.value))){learning.mistakes=learning.mistakes.filter(x=>x!==m);const r=learning.units[String(m.unit)];if(r&&!r.passed.includes(m.index))r.passed.push(m.index);persistLearning();renderReview();updateLearningScore()}else f.textContent=`再試：${m.answer} ${m.why}`}),f);el('review-list').append(box)})}
+el('backup-learning').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({version:1,state,learning},null,2)],{type:'application/json'});const a=node('a');const url=URL.createObjectURL(blob);a.href=url;a.download='b1-learning-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
+el('restore-learning').addEventListener('change',async ev=>{try{const f=ev.target.files[0];if(!f)return;if(f.size>1000000)throw Error('檔案太大');const b=JSON.parse(await f.text());if(b.version!==1||!b.learning||!b.learning.units||Array.isArray(b.learning.units)||!Array.isArray(b.learning.mistakes))throw Error('格式唔正確');for(const [id,r] of Object.entries(b.learning.units)){if(!/^[0-4]$/.test(id)||!Array.isArray(r.passed)||r.passed.some(x=>!Number.isInteger(x)||x<0||x>5)||!Array.isArray(r.first)||r.first.some(x=>x!==null&&typeof x!=='boolean'))throw Error('練習資料唔正確')}if(b.learning.mistakes.some(m=>!m||!Number.isInteger(m.unit)||m.unit<0||m.unit>4||!Number.isInteger(m.index)||m.index<0||m.index>5||typeof m.prompt!=='string'||typeof m.answer!=='string'||typeof m.why!=='string'))throw Error('錯題資料唔正確');learning=b.learning;persistLearning();renderLearning();el('learning-save').textContent='已還原練習紀錄'}catch(e){el('learning-save').textContent='未能還原：'+e.message}ev.target.value=''});
+// Wrap existing navigation: scores persist, and old preview completion is not evidence of mastery.
+state.done=state.done.filter(id=>{const r=learning.units[String(id)];return r&&Array.isArray(r.passed)&&new Set(r.passed.filter(i=>Number.isInteger(i)&&i>=0&&i<6)).size===6});save();
+const originalDraw=draw;draw=function(){originalDraw();renderLearning()};
+draw();
