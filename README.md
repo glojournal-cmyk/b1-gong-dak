@@ -1,4 +1,14 @@
-# B1 講得掂 — 免費 B1 口語教練 MVP
+# B1 講得掂 — 開發入口
+
+> **Current development priority (October 2026): PC-first genuine local AI conversations, then Samsung Android.**
+>
+> - **[Windows PC test (Ollama, no paid API)](desktop/README.md)** — genuine AI chat; use this for conversation QA.
+> - **[Native Samsung Android experimental source](android/README.md)** — APK compiles, but real-device model loading and AI quality are not yet validated.
+> - **[Original root PWA](index.html)** — older scripted demo, NOT a genuine AI conversation. Do not use it to judge AI quality.
+>
+> The desktop test requires Ollama + a locally downloaded model on the user's PC. GitHub Pages/Vercel alone do not provide free ongoing AI inference. **Do not claim model quality has passed without a real 5+ turn session.**
+
+## Legacy scripted PWA (archived reference)
 
 A mobile-first, installable PWA prototype for Hong Kong Cantonese-speaking learners preparing for Trinity GESE Grade 5 (B1).
 
