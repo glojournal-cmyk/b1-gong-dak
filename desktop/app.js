@@ -1,0 +1,22 @@
+'use strict';
+const STORE='b1-gong-dak-pc-ai-v1';
+const el=id=>document.getElementById(id);
+function clean(o){return {topic:typeof o?.topic==='string'?o.topic:'My family',mode:o?.mode==='exam'?'exam':'coach',facts:typeof o?.facts==='string'?o.facts.slice(0,2000):'',turns:Array.isArray(o?.turns)?o.turns.filter(t=>t&&['user','assistant'].includes(t.role)&&typeof t.content==='string').slice(-30):[]}}
+let data;try{data=clean(JSON.parse(localStorage.getItem(STORE)||'{}'))}catch{data=clean({})}
+let ready=false,busy=false;
+function save(){try{localStorage.setItem(STORE,JSON.stringify(data))}catch{setNote('本機儲存失敗，請匯出對話備份')}}
+function setNote(note){el('typing-status').textContent=note}
+function updateControls(){el('send').disabled=!ready||busy;el('start').disabled=!ready||busy;el('message').disabled=!ready||busy;el('new-chat').disabled=busy;el('topic').disabled=busy;el('mode').disabled=busy;el('save-facts').disabled=busy}
+function bubble(role,text){const div=document.createElement('div');div.className='turn '+(role==='user'?'user':'assistant');const who=document.createElement('div');who.className='speaker';who.textContent=role==='user'?'YOU':'AI ENGLISH COACH';const content=document.createElement('div');content.className='bubble';content.textContent=text;div.append(who,content);el('chat').append(div);el('chat').scrollTop=el('chat').scrollHeight}
+function render(){el('chat').replaceChildren();if(!data.turns.length){const n=document.createElement('div');n.className='intro-card';n.textContent='呢個版本用電腦內嘅語言模型生成回覆。左邊顯示「AI 已就緒」之後，按「開始對話」。';el('chat').append(n)}else data.turns.forEach(t=>bubble(t.role,t.content));el('topic').value=data.topic;el('mode').value=data.mode;el('facts').value=data.facts}
+async function request(path,options){const r=await fetch(path,options);let j;try{j=await r.json()}catch{throw new Error('本機服務回應格式錯誤')}if(!r.ok)throw Error(j.error||'本機服務出錯');return j}
+async function health(){try{const x=await request('/api/health');ready=!!x.ready;el('status').className='status '+(ready?'ready':'error');el('status-text').textContent=ready?'AI 已就緒：'+x.model:(x.error||'尚未準備好')+'（模型：'+x.model+'）';setNote(ready?'可以開始真正 AI 文字對話':'請先啟動 Ollama，同埋下載免費模型')}catch(e){ready=false;el('status').className='status error';el('status-text').textContent=e.message||'無法連接本機服務'}updateControls()}
+async function ask(start=false){if(!ready||busy)return;const msg=el('message').value.trim();if(!start&&!msg){setNote('請先輸入一句英文');return}if(!start){data.turns.push({role:'user',content:msg});bubble('user',msg);el('message').value='';save()}busy=true;updateControls();setNote('AI 正在根據上下文回答…');try{const x=await request('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:data.topic,mode:data.mode,facts:data.facts,messages:data.turns.slice(-30)})});data.turns.push({role:'assistant',content:x.reply});data.turns=data.turns.slice(-30);bubble('assistant',x.reply);save();setNote('回覆由本機 '+x.model+' 生成')}catch(e){setNote('AI 暫時未能回答：'+e.message);const box=document.createElement('div');box.className='intro-card';box.textContent='本機 AI 暫時失敗：'+e.message+'。唔會用預設句型冒充對話。';el('chat').append(box)}finally{busy=false;updateControls();el('message').focus()}}
+el('chat-form').addEventListener('submit',e=>{e.preventDefault();ask(false)});
+el('message').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask(false)}});
+el('start').addEventListener('click',()=>{if(data.turns.length){if(!confirm('開始新對話？舊紀錄會清除（可以先匯出）。'))return;data.turns=[];render();save()}ask(true)});
+el('new-chat').addEventListener('click',()=>{if(confirm('確定清除目前對話並重新開始？')){data.turns=[];render();save();setNote('新對話準備好；請按開始對話')}});
+for(const id of ['topic','mode'])el(id).addEventListener('change',()=>{const val=el(id).value;if(data.turns.length&&!confirm('轉換主題／模式會清空目前對話，確定嗎？')){el(id).value=data[id];return}data[id]=val;data.turns=[];render();save();setNote('設定已更新；可以開始新對話')});
+el('save-facts').addEventListener('click',()=>{if(data.turns.length&&!confirm('儲存新個人資料會開始新對話，以避免沿用舊假設。確定？'))return;data.facts=el('facts').value.trim().slice(0,2000);data.turns=[];render();save();setNote('個人資料已記住；可以開始新對話')});
+el('export').addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([JSON.stringify({...data,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='b1-pc-dialogue.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000)});
+render();updateControls();health();
