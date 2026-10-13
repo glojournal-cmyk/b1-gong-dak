@@ -1,0 +1,35 @@
+[
+  {
+    "answer": "One daughter.",
+    "corrected": "I have one daughter.",
+    "explanation": "Original is grammatically correct, but the corrected version clarifies that you possess one daughter by adding \"I\" before \"have\".",
+    "follow": "What is her name?",
+    "seconds": 10.862
+  },
+  {
+    "answer": "Can you make it more specific?",
+    "clarified": "What's your name?",
+    "seconds": 1.995
+  },
+  {
+    "answer": "She is thirteen years old.",
+    "corrected": "She is thirteen years old.",
+    "explanation": "Your sentence is correct.",
+    "follow": "What does she like to do in her free time?",
+    "seconds": 5.71
+  },
+  {
+    "answer": "We usually cooking together.",
+    "corrected": "We usually cook together.",
+    "explanation": "The original sentence is grammatically incorrect because it uses \"cooking\" as a verb instead of the correct form \"cook.\" The corrected version uses the past tense form correctly.",
+    "follow": "What kind of food do they typically cook together?",
+    "seconds": 12.567
+  },
+  {
+    "answer": "I like it because we talk together.",
+    "corrected": "I like it because we talk together.",
+    "explanation": "Your sentence is correct.",
+    "follow": "What other activities do they enjoy doing together?",
+    "seconds": 6.757
+  }
+]

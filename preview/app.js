@@ -33,7 +33,7 @@ function resetListeningView(){
   setRecordUi(false);
   el('speech-status').textContent='準備就緒。撳咪高峰後，請容許瀏覽器使用咪高峰。';
   el('spoken').textContent='你講嘅英文會顯示喺呢度。';
-  el('speech-feedback').textContent='呢個版本提供語音轉文字同示範句，暫時未能用 AI 判斷回答內容或自然追問。';
+  el('speech-feedback').textContent='AI 啟動後會教改正句，等你重試後再追問。未啟動 AI 時只會將語音轉成文字。';
 }
 function readAloud(text){
   if(!('speechSynthesis' in window)){
@@ -88,7 +88,8 @@ el('record').addEventListener('click',()=>{
       el('memo').value=transcript;
       el('memo').dispatchEvent(new Event('input',{bubbles:true}));
       el('speech-status').textContent='✓ 已收到你講嘅英文。下面文字框可以修改辨識錯嘅字。';
-      el('speech-feedback').textContent='你可以同上面示範句比較，再按咪高峰練多次。呢個係語音轉文字，唔係 AI 改卷。';
+      el('speech-feedback').textContent='已轉成文字。AI 啟動後可以糾正；辨識錯嘅字可以先修改。';
+
     }
   };
   rec.onerror=ev=>{
@@ -108,6 +109,7 @@ el('record').addEventListener('click',()=>{
     if(activeRecognition!==rec)return;
     activeRecognition=null;
     setRecordUi(false);
+    if(heardFinal&&!hadError)window.dispatchEvent(new Event('b1-speech-final'));
     if(!heardFinal&&!hadError)el('speech-status').textContent='未收到完整英文。可以再按咪高峰，或者用 Windows Win + H。';
   };
   try{
