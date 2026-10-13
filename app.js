@@ -88,7 +88,8 @@ el('record').addEventListener('click',()=>{
       el('memo').value=transcript;
       el('memo').dispatchEvent(new Event('input',{bubbles:true}));
       el('speech-status').textContent='✓ 已收到你講嘅英文。下面文字框可以修改辨識錯嘅字。';
-      el('speech-feedback').textContent='你可以同上面示範句比較，再按咪高峰練多次。呢個係語音轉文字，唔係 AI 改卷。';
+      el('speech-feedback').textContent='已轉成文字。AI 啟動後可以糾正；辨識錯嘅字可以先修改。';
+
     }
   };
   rec.onerror=ev=>{
@@ -108,6 +109,7 @@ el('record').addEventListener('click',()=>{
     if(activeRecognition!==rec)return;
     activeRecognition=null;
     setRecordUi(false);
+    if(heardFinal&&!hadError)window.dispatchEvent(new Event('b1-speech-final'));
     if(!heardFinal&&!hadError)el('speech-status').textContent='未收到完整英文。可以再按咪高峰，或者用 Windows Win + H。';
   };
   try{
