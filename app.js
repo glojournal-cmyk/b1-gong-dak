@@ -59,7 +59,7 @@ function load(){try{return cleanState(JSON.parse(localStorage.getItem(KEY)))}cat
 let state=load(),dialog=null,mock=null,mockTicker=null,mic=null,toastTimer=null,voices=[];
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));return true}catch{notify('儲存失敗，可能已超出瀏覽器儲存空間');return false}}
 function notify(message){const el=byId('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3500)}
-function go(name){const v=byId(`view-${name}`);if(!v)return;document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x===v));document.querySelectorAll('.bottom-nav button').forEach(x=>x.classList.toggle('current',x.dataset.go===name));window.scrollTo({top:0,behavior:'instant'});if(name==='home')renderHome();if(name==='memory')renderMemory();if(name==='settings')renderSettings();if(name==='mock')renderMock();}
+function go(name){const v=byId(`view-${name}`);if(!v)return;document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x===v));document.querySelectorAll('.bottom-nav button').forEach(x=>x.classList.toggle('current',x.dataset.go===name));window.scrollTo({top:0,behavior:'instant'});if(name==='home')renderHome();if(name==='practice'&&!dialog)startDialogue(byId('topic-choice').value);if(name==='memory')renderMemory();if(name==='settings')renderSettings();if(name==='mock')renderMock();}
 function el(tag,classes,txt){const n=document.createElement(tag);if(classes)n.className=classes;if(txt!==undefined)n.textContent=txt;return n}
 function btn(label,fn,cls=''){const b=el('button',cls,label);b.type='button';b.addEventListener('click',fn);return b}
 function renderHome(){byId('stat-sessions').textContent=state.sessions;byId('stat-sentences').textContent=state.saved.length;byId('stat-topics').textContent=(OFFICIAL.filter(id=>state.touched.includes(id)).length+(state.touched.some(id=>['family','work','life'].includes(id))?1:0))+'/7'}
@@ -69,7 +69,7 @@ function initTopics(){const sel=byId('topic-choice');for(const t of TOPICS){cons
 function clearChat(){byId('chat-window').replaceChildren()}
 function scrollChat(){const box=byId('chat-window');box.scrollTop=box.scrollHeight}
 function appendMessage(who,text,sub){const wrap=el('div','chat-item '+(who==='student'?'student':''));wrap.append(el('div','avatar',who==='student'?'🙂':'👩🏻‍🏫'));const bubble=el('div','chat-bubble');bubble.append(el('small','speaker-label',who==='student'?'YOU':'EXAMINER'),document.createTextNode(text));if(sub)bubble.append(el('span','tip',sub));wrap.append(bubble);byId('chat-window').append(wrap);scrollChat()}
-function startDialogue(id){const t=topic(id||byId('topic-choice').value);dialog={topicId:t.id,index:0,awaiting:false,turns:0,answers:{}};clearChat();byId('user-answer').value='';byId('user-answer').disabled=false;byId('send-answer').disabled=false;byId('mic-button').disabled=false;askQuestion();}
+function startDialogue(id){if(mic){try{mic.abort()}catch{}mic=null}const t=topic(id||byId('topic-choice').value);dialog={topicId:t.id,index:0,awaiting:false,turns:0,answers:{}};clearChat();byId('user-answer').value='';byId('user-answer').disabled=false;byId('send-answer').disabled=false;byId('mic-button').disabled=false;askQuestion();}
 function currentQuestion(){if(!dialog)return null;const t=topic(dialog.topicId);return dialog.lastQuestion||t.questions[dialog.index % t.questions.length]}
 function askQuestion(){if(!dialog)return;const q=currentQuestion();dialog.awaiting=true;const mode=byId('help-level').value;let question=q.en,zh=q.zh;
  // Previous answers customise later questions without inventing any family facts.
@@ -156,7 +156,7 @@ function respondToIntent(intent,input){const q=currentQuestion();appendMessage('
  if(intent==='greeting'){box.append(el('strong','','Hello!'),el('p','',`Let’s practise. ${q.en}`));}
  box.append(btn('繼續回答原本問題',()=>{byId('user-answer').focus()},'next-question'));
  byId('chat-window').append(box);scrollChat();}
-function submitPractice(){if(!dialog)startDialogue(byId('topic-choice').value);if(!dialog.awaiting){notify('請按「下一個問題」或「再答一次」');return}const input=byId('user-answer').value.trim();if(!input){notify('請先講或者輸入一句英文');return}const intent=conversationalIntent(input);if(intent){respondToIntent(intent,input);return}const q=currentQuestion();appendMessage('student',input);byId('user-answer').value='';const result=build(q,input);if(result.ok)dialog.turns++;dialog.awaiting=!result.ok;
+function submitPractice(){if(!dialog){const unsent=byId('user-answer').value;startDialogue(byId('topic-choice').value);byId('user-answer').value=unsent;}if(!dialog.awaiting){notify('請按「下一個問題」或「再答一次」');return}const input=byId('user-answer').value.trim();if(!input){notify('請先講或者輸入一句英文');return}const intent=conversationalIntent(input);if(intent){respondToIntent(intent,input);return}const q=currentQuestion();appendMessage('student',input);byId('user-answer').value='';const result=build(q,input);if(result.ok)dialog.turns++;dialog.awaiting=!result.ok;
  if(result.ok)dialog.answers[q.id]=result;
  renderCoach(result,q);if(result.ok){if(dialog.turns===1)state.sessions++;if(!state.touched.includes(dialog.topicId))state.touched.push(dialog.topicId);persist()}}
 function saveSentence(en,zh){if(state.saved.some(x=>x.en===en)){notify('呢句已經喺收藏');return}state.saved.push({en,zh});if(persist())notify('句子已經收藏 ♡')}
@@ -166,7 +166,52 @@ function renderVoiceOptions(){voices=getVoices();const sel=byId('voice-specific'
 function renderSettings(){byId('voice-gender').value=state.voiceGender;byId('speech-rate').value=state.rate;byId('rate-value').textContent=Number(state.rate).toFixed(2)+'×';renderVoiceOptions()}
 function pickVoice(){let v=voices.find(x=>x.name===state.voiceName);if(v)return v;const brit=voices.filter(v=>/en[-_]GB/i.test(v.lang));const pool=brit.length?brit:voices;const male=/male|daniel|george|ryan|oliver|arthur|james|brian|thomas/i;const female=/female|serena|kate|susan|samantha|emma|libby|hazel|sonia|sophie/i;return pool.find(x=>(state.voiceGender==='male'?male:female).test(x.name))||pool[0]||null}
 function speak(text){if(!('speechSynthesis' in window)){notify('呢個瀏覽器唔支援英文語音朗讀');return}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=state.rate;const v=pickVoice();if(v)u.voice=v;speechSynthesis.speak(u)}
-function startMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){notify('此瀏覽器唔支援語音辨識，仍然可以輸入英文練習');return}if(mic){try{mic.stop()}catch{};mic=null;return}try{const rec=new SR();rec.lang='en-GB';rec.interimResults=false;rec.continuous=false;rec.maxAlternatives=1;mic=rec;byId('mic-status').textContent='正在聽你講英文…';byId('mic-button').textContent='■ 停止收音';rec.onresult=e=>{const txt=e.results?.[0]?.[0]?.transcript||'';byId('user-answer').value=txt;byId('mic-status').textContent='已轉文字，請按提交（未必理解）'};rec.onerror=e=>{notify('語音辨識失敗：'+(e.error||'請重試')+'。亦可以改用打字')};rec.onend=()=>{mic=null;byId('mic-button').textContent='🎙️ 語音輸入';if(byId('mic-status').textContent.startsWith('正在'))byId('mic-status').textContent='已停止收音'};rec.start()}catch{mic=null;notify('無法啟動咪高峰，請檢查權限')}}
+function speechRecognizer(){return window.SpeechRecognition||window.webkitSpeechRecognition||null}
+function showMicFallback(){
+ const supported=!!speechRecognizer();const button=byId('mic-button'),status=byId('mic-status');
+ if(!supported){button.textContent='⌨️ 用鍵盤語音輸入';button.setAttribute('aria-label','開啟輸入框，使用 Samsung 或 Gboard 鍵盤咪高峰');status.textContent='網頁語音辨識未獲瀏覽器支援；可用鍵盤咪高峰';}
+ else{button.textContent='🎙️ 語音輸入';button.setAttribute('aria-label','用咪高峰講英文');if(status.textContent.includes('網頁語音辨識未'))status.textContent='可以試用網頁咪高峰';}
+}
+function micErrorMessage(error){const messages={
+ 'not-allowed':'咪高峰權限被拒絕。請喺 Chrome 網站設定允許咪高峰，然後重試。',
+ 'service-not-allowed':'呢個瀏覽器未開放語音辨識服務。可使用鍵盤咪高峰。',
+ 'audio-capture':'手機未能使用咪高峰，請檢查 Android 權限。',
+ 'no-speech':'未收到清楚英文。你可以停低諗一諗，再按語音輸入繼續；或者用鍵盤咪高峰。',
+ 'network':'語音辨識需要網絡，但目前連接失敗。可以用鍵盤語音輸入或打字。',
+ 'language-not-supported':'目前語音服務未支援英文辨識，請試用 Chrome 或鍵盤咪高峰。',
+ 'aborted':'已停止收音。'
+ };return messages[error]||'語音辨識未能完成。可以再試，或者用鍵盤咪高峰。'}
+function startMic(){
+ const SR=speechRecognizer();
+ if(!SR){byId('user-answer').focus();notify('請按手機鍵盤上嘅咪高峰輸入英文（如鍵盤有支援），然後按提交。');return}
+ if(mic){try{mic.stop()}catch{}return}
+ if('speechSynthesis' in window)speechSynthesis.cancel();
+ try{
+  const rec=new SR();rec.lang='en-GB';rec.interimResults=false;rec.continuous=false;rec.maxAlternatives=1;
+  let gotResult=false,errored=false;mic=rec;
+  rec.onstart=()=>{byId('mic-status').textContent='正在聽你講英文…';byId('mic-button').textContent='■ 停止收音'};
+  rec.onresult=e=>{const txt=e.results?.[0]?.[0]?.transcript||'';if(txt){gotResult=true;byId('user-answer').value=txt;byId('mic-status').textContent='已轉成文字，請檢查內容後提交（未必理解）';byId('user-answer').focus()}};
+  rec.onerror=e=>{errored=true;const m=micErrorMessage(e.error);byId('mic-status').textContent=m;notify(m)};
+  rec.onend=()=>{if(mic===rec)mic=null;showMicFallback();if(!gotResult&&!errored)byId('mic-status').textContent='已停止收音，未收到文字；可以重試或用鍵盤咪高峰'};
+  rec.start();
+ }catch{mic=null;showMicFallback();notify('無法啟動咪高峰，請檢查 Chrome 及 Android 權限，或改用鍵盤咪高峰。')}
+}
+function diagnoseDevice(){
+ const browser=/SamsungBrowser/i.test(navigator.userAgent)?'Samsung Internet':/Chrome|CriOS/i.test(navigator.userAgent)?'Chrome／Chromium':'其他瀏覽器';
+ const recognition=!!speechRecognizer();const tts='speechSynthesis' in window;const available=tts?getVoices():[];
+ let storage=false;try{const key='b1_diag_'+Date.now();localStorage.setItem(key,'ok');storage=localStorage.getItem(key)==='ok';localStorage.removeItem(key)}catch{}
+ const lines=[
+  ['瀏覽器',browser],['網頁語音辨識',recognition?'可啟動測試（未確認收音權限）':'暫不支援；請用 Chrome 或鍵盤咪高峰'],
+  ['英文朗讀',tts?'瀏覽器提供功能（請按試聽驗證）':'瀏覽器未提供功能'],
+  ['裝置英文聲線',String(available.length)+' 款（男女及英式聲線視乎系統）'],
+  ['網絡',navigator.onLine?'目前顯示已連線':'目前顯示離線'],
+  ['本機進度儲存',storage?'正常':'未能儲存，請檢查私隱模式及儲存限制']
+ ];
+ const parent=byId('device-results');parent.replaceChildren();
+ for(const [name,value] of lines){const item=el('div','device-result-row');item.append(el('strong','',name),el('span','',value));parent.append(item)}
+ parent.append(el('p','hint-note','檢查只反映瀏覽器功能，唔代表咪高峰已取得權限。要確認收音，請到「練習」按語音輸入；如無法使用，可用 Samsung 鍵盤／Gboard 咪高峰。'));
+}
+
 function shuffledTwo(){const a=[...OFFICIAL];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,2)}
 function createMock(){const prepared=byId('mock-prepared').value;const topics=[prepared,...shuffledTwo()];const questions=topics.flatMap(id=>topic(id).questions.slice(0,id===prepared?4:3).map(q=>({...q,topicId:id})));mock={questions,at:0,answers:[],started:Date.now(),finished:false};renderMock();speak(questions[0].en);mockTicker=setInterval(()=>{if(mock&&!mock.finished){if(Date.now()-mock.started>=600000){finishMock();return}const time=byId('mock-clock');if(time)time.textContent=clock(600000-(Date.now()-mock.started))}},1000)}
 function clock(ms){let sec=Math.max(0,Math.floor(ms/1000));return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`}
@@ -178,6 +223,6 @@ function renderMock(){const p=byId('mock-panel');p.replaceChildren();if(!mock){c
  const q=mock.questions[mock.at];const run=el('div','mock-running');run.append(el('div','timer','倒數時間：'));const time=el('div','timer',clock(600000-(Date.now()-mock.started)));time.id='mock-clock';run.append(time,el('p','mock-section',`PART ${mock.at<4?'1 · PREPARED TOPIC':'2 · CONVERSATION'}　•　${topic(q.topicId).name}`),el('p','mock-section',`QUESTION ${mock.at+1} / ${mock.questions.length}`),el('div','mock-question',q.en));const answer=el('textarea');answer.id='mock-answer';answer.placeholder='用英文回答（可打字；本試驗版 Mock 暫未接錄音評分）';run.append(answer);const actions=el('div','answer-actions');actions.append(btn('🔊 重讀問題',()=>speak(q.en),'button-outline'),btn('提交 →',nextMock,'primary'));run.append(actions,btn('略過此題',()=>recordMock(''),'button-quiet'),btn('結束練習',finishMock,'button-quiet'));p.append(run)}
 function downloadExport(){const text=JSON.stringify({...state,exportedAt:new Date().toISOString()},null,2);const a=document.createElement('a');const url=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.href=url;a.download='b1-gongdak-backup.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function importJson(file){if(!file||file.size>2000000){notify('備份檔案過大或無效');return}const r=new FileReader();r.onload=()=>{try{const obj=JSON.parse(r.result);if(obj.version!==1||!Array.isArray(obj.saved)||!obj.facts||typeof obj.facts!=='object')throw Error('invalid');const next=cleanState(obj);if(!confirm('確定以備份覆蓋這部手機目前嘅進度？'))return;state=next;if(persist()){renderHome();renderMemory();renderSettings();notify('已還原備份')}}catch{notify('備份格式不正確')}};r.readAsText(file)}
-function attach(){document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));byId('start-practice').addEventListener('click',()=>{go('practice');startDialogue()});byId('send-answer').addEventListener('click',submitPractice);byId('user-answer').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();submitPractice()}});byId('new-dialogue').addEventListener('click',()=>startDialogue());byId('repeat-question').addEventListener('click',()=>{const q=currentQuestion();if(q)speak(q.en);else notify('請先開始對話')});byId('mic-button').addEventListener('click',startMic);byId('topic-choice').addEventListener('change',()=>startDialogue());byId('help-level').addEventListener('change',()=>{if(dialog)startDialogue(dialog.topicId)});byId('voice-gender').addEventListener('change',e=>{state.voiceGender=e.target.value;state.voiceName='';persist();renderVoiceOptions()});byId('voice-specific').addEventListener('change',e=>{state.voiceName=e.target.value;persist()});byId('speech-rate').addEventListener('input',e=>{state.rate=Number(e.target.value);byId('rate-value').textContent=state.rate.toFixed(2)+'×';persist()});byId('test-voice').addEventListener('click',()=>speak('Hello! Welcome to your B1 speaking practice.'));byId('export-data').addEventListener('click',downloadExport);byId('import-data').addEventListener('click',()=>byId('import-file').click());byId('import-file').addEventListener('change',e=>{importJson(e.target.files[0]);e.target.value=''});byId('delete-data').addEventListener('click',()=>{if(!confirm('確定永久清除本機進度、收藏句子同個人資料？請先備份。'))return;state=defaultState();persist();dialog=null;mock=null;clearInterval(mockTicker);renderHome();renderMemory();renderSettings();notify('本機資料已清除')});window.addEventListener('hashchange',()=>{const name=location.hash.replace('#','');if(byId('view-'+name))go(name)});if('speechSynthesis' in window){speechSynthesis.addEventListener?.('voiceschanged',renderVoiceOptions)}if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});}
-function init(){initTopics();attach();renderHome();renderMemory();renderSettings();renderMock();const name=location.hash.replace('#','');go(byId('view-'+name)?name:'home')}
+function attach(){document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));byId('start-practice').addEventListener('click',()=>{go('practice');startDialogue()});byId('send-answer').addEventListener('click',submitPractice);byId('user-answer').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();submitPractice()}});byId('new-dialogue').addEventListener('click',()=>startDialogue());byId('repeat-question').addEventListener('click',()=>{const q=currentQuestion();if(q)speak(q.en);else notify('請先開始對話')});byId('mic-button').addEventListener('click',startMic);byId('topic-choice').addEventListener('change',()=>startDialogue());byId('help-level').addEventListener('change',()=>{if(dialog)startDialogue(dialog.topicId)});byId('voice-gender').addEventListener('change',e=>{state.voiceGender=e.target.value;state.voiceName='';persist();renderVoiceOptions()});byId('voice-specific').addEventListener('change',e=>{state.voiceName=e.target.value;persist()});byId('speech-rate').addEventListener('input',e=>{state.rate=Number(e.target.value);byId('rate-value').textContent=state.rate.toFixed(2)+'×';persist()});byId('test-voice').addEventListener('click',()=>speak('Hello! Welcome to your B1 speaking practice.'));byId('diagnose-device').addEventListener('click',diagnoseDevice);byId('export-data').addEventListener('click',downloadExport);byId('import-data').addEventListener('click',()=>byId('import-file').click());byId('import-file').addEventListener('change',e=>{importJson(e.target.files[0]);e.target.value=''});byId('delete-data').addEventListener('click',()=>{if(!confirm('確定永久清除本機進度、收藏句子同個人資料？請先備份。'))return;state=defaultState();persist();dialog=null;mock=null;clearInterval(mockTicker);renderHome();renderMemory();renderSettings();notify('本機資料已清除')});window.addEventListener('hashchange',()=>{const name=location.hash.replace('#','');if(byId('view-'+name))go(name)});if('speechSynthesis' in window){speechSynthesis.addEventListener?.('voiceschanged',renderVoiceOptions)}if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+function init(){initTopics();attach();showMicFallback();renderHome();renderMemory();renderSettings();renderMock();const name=location.hash.replace('#','');go(byId('view-'+name)?name:'home')}
 document.addEventListener('DOMContentLoaded',init);
