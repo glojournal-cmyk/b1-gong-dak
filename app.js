@@ -69,25 +69,50 @@ function initTopics(){const sel=byId('topic-choice');for(const t of TOPICS){cons
 function clearChat(){byId('chat-window').replaceChildren()}
 function scrollChat(){const box=byId('chat-window');box.scrollTop=box.scrollHeight}
 function appendMessage(who,text,sub){const wrap=el('div','chat-item '+(who==='student'?'student':''));wrap.append(el('div','avatar',who==='student'?'🙂':'👩🏻‍🏫'));const bubble=el('div','chat-bubble');bubble.append(el('small','speaker-label',who==='student'?'YOU':'EXAMINER'),document.createTextNode(text));if(sub)bubble.append(el('span','tip',sub));wrap.append(bubble);byId('chat-window').append(wrap);scrollChat()}
-function startDialogue(id){const t=topic(id||byId('topic-choice').value);dialog={topicId:t.id,index:0,awaiting:false,turns:0};clearChat();byId('user-answer').value='';askQuestion();}
-function currentQuestion(){if(!dialog)return null;const t=topic(dialog.topicId);return t.questions[dialog.index % t.questions.length]}
-function askQuestion(){if(!dialog)return;const q=currentQuestion();dialog.awaiting=true;appendMessage('coach',q.en,q.zh);const mode=byId('help-level').value;if(mode!=='none'){const n=el('div','coach-block');n.append(el('strong','',mode==='full'?'練習提示（例子，唔係你嘅個人資料）':'KEYWORDS'));n.append(el('p','',mode==='full'?q.sample:q.keywords));byId('chat-window').append(n)}scrollChat()}
+function startDialogue(id){const t=topic(id||byId('topic-choice').value);dialog={topicId:t.id,index:0,awaiting:false,turns:0,answers:{}};clearChat();byId('user-answer').value='';byId('user-answer').disabled=false;byId('send-answer').disabled=false;byId('mic-button').disabled=false;askQuestion();}
+function currentQuestion(){if(!dialog)return null;const t=topic(dialog.topicId);return dialog.lastQuestion||t.questions[dialog.index % t.questions.length]}
+function askQuestion(){if(!dialog)return;const q=currentQuestion();dialog.awaiting=true;const mode=byId('help-level').value;let question=q.en,zh=q.zh;
+ // Previous answers customise later questions without inventing any family facts.
+ if(q.id==='family_age' && dialog.answers.family_intro?.child==='son'){question='How old is your son?';zh='你個仔幾多歲？'}
+ if(q.id==='family_why' && dialog.answers.family_weekend?.activity==='church'){question='Why do you enjoy going to church?';zh='你點解鍾意返教會？'}
+ dialog.lastQuestion={...q,en:question,zh};
+ appendMessage('coach',question,zh);if(mode!=='none'){const n=el('div','coach-block quick-tip');n.append(el('strong','',mode==='full'?'參考句型（非你嘅個人資料）':'可用關鍵字'));n.append(el('p','',mode==='full'?q.sample:q.keywords));byId('chat-window').append(n)}scrollChat();
+ // A question is read aloud after a real button click; fallback to text if TTS is unsupported.
+ speak(question);
+}
 function norm(s){return String(s||'').toLowerCase().replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim()}
 function firstMatch(s,rx){const m=s.match(rx);return m&&m[1]?m[1]:null}
-function build(q,input){const s=norm(input);const f=state.facts;let en='',zh='',pending=null;
- const age=firstMatch(s,/\b(\d{1,2})\s*(?:years?\s*old|year\s*old)?\b/);const explicitAge=firstMatch(s,/\b(?:daughter(?:\s+is)?|she\s+is|she's)\s*(\d{1,2})\b/);
+
+// A zero-API dialogue must never pretend to understand free-form English.
+function conversationalIntent(input){const s=norm(input);
+ if(/\b(?:can you|do you|are you able to) (?:hear|understand|listen to|see) (?:me|what i say|my voice|my words)/.test(s)||/\b(?:can you hear me|do you understand me|are you listening)\b/.test(s))return 'audio-check';
+ if(/\b(?:pardon|say that again|repeat (?:the|your|that)? ?question|one more time|didn.t (?:hear|understand)|can't (?:hear|understand)|dont understand|don't understand)\b/.test(s))return 'repeat';
+ if(/\b(?:what (?:should|can|do) i (?:say|answer)|help me|give me (?:a|an) (?:example|hint))\b/.test(s))return 'help';
+ if(/^(?:hello|hi|good morning|good afternoon|good evening|thank you|thanks|ok|okay)[ .!?]*$/.test(input.trim().toLowerCase()))return 'greeting';
+ return null;
+}
+function ageValue(s){const digit=firstMatch(s,/\b(\d{1,2})\s*(?:years?\s*old|year[- ]old)?\b/);if(digit && Number(digit)>0 && Number(digit)<100)return digit;const words={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20};const m=s.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)(?:[ -](one|two|three|four|five|six|seven|eight|nine))?\b/);return m?String(words[m[1]]+(m[2]?words[m[2]]:0)):null}
+function familyIntroResult(s,f){
+ if(/\b(?:no (?:children|kids|sons|daughters)|don't have (?:any )?(?:children|kids)|do not have (?:any )?(?:children|kids))\b/.test(s))return {en:'I do not have any children.',zh:'我冇小朋友。',pending:{daughterCount:'0'},child:'none'};
+ if(/\b(?:daughter|daughters|girl|girls)\b/.test(s)||/女兒/.test(s)){
+  const num=/\b(?:two|2)\b/.test(s)?'two':/\b(?:three|3)\b/.test(s)?'three': 'one';
+  const a= /\b(?:daughter (?:is |aged |who is )?|she (?:is |is aged )?|she's )(\d{1,2})\b/.exec(s)?.[1] || (/(?:years?[- ]old|aged|she is|she's)/.test(s)?ageValue(s.replace(/\b(?:one|two|three) daughter[s]?\b/g,'')):null) || f.daughterAge;
+  const pending={daughterCount:num};if(a&&Number(a)>0&&Number(a)<100&&/(?:year|old|aged|she)/.test(s))pending.daughterAge=a;
+  const en=a&&num==='one'?`I have a ${a}-year-old daughter.`:`I have ${num} ${num==='one'?'daughter':'daughters'}.`;
+  return {en,zh:a&&num==='one'?`我有一個 ${a} 歲嘅女兒。`:'你可以用 I have... 講你有幾多個女兒。',pending,child:'daughter',knownAge:!!a};
+ }
+ if(/\b(?:son|sons|boy|boys)\b/.test(s)){const num=/\b(?:two|2)\b/.test(s)?'two':/\b(?:three|3)\b/.test(s)?'three':'one';return {en:`I have ${num} ${num==='one'?'son':'sons'}.`,zh:'你可以用 I have... 講你有幾多個仔。',child:'son'}}
+ if(/\b(?:husband|wife|married)\b/.test(s)){const en=/husband/.test(s)?'I live with my husband.':/wife/.test(s)?'I live with my wife.':'I am married.';return {en,zh:'可以用簡單句介紹家人。',child:'none-mentioned'}}
+ return null;
+}
+function understandingFeedback(input){const s=norm(input);if(/\b(?:my name is|i am called)\b/.test(s))return '呢句係介紹你個名，但目前問題係另一個主題。';return '我已收到你嘅輸入，但免費句型引擎暫時唔明白呢個答案，唔會假裝明白。你可以重答、睇句型例子，或者跳過。'}
+function build(q,input){const s=norm(input);const f=state.facts;let en='',zh='',pending=null,child=null,knownAge=false,activity=null;
  switch(q.id){
  case 'family_intro':{
-  if(/daughter|girl|女兒/i.test(input)){const num=/\b(?:two|2)\b/.test(s)?'two':/\b(?:three|3)\b/.test(s)?'three':'one';const a=explicitAge||(age&&age!=='1'&&age!=='2'&&age!=='3'&&/old|year/.test(s)?age:null)||f.daughterAge;
-   en=a&&num==='one'?`I have a ${a}-year-old daughter.`:`I have ${num} ${num==='one'?'daughter':'daughters'}.`;
-   zh=a&&num==='one'?`我有一個 ${a} 歲嘅女兒。`:`我有${num==='one'?'一個':num==='two'?'兩個':'三個'}女兒。`;
-   pending={daughterCount:num};if(explicitAge|| (age&&/year|old/.test(s)))pending.daughterAge=explicitAge||age;
-  }else if(/son|boy/.test(s)){en=/two|\b2\b/.test(s)?'I have two sons.':'I have one son.';zh='你可以用 I have 開頭，講有幾多個仔。'}
-  else if(/husband|wife|married/.test(s)){en=/husband/.test(s)?'I live with my husband.':/wife/.test(s)?'I live with my wife.':'I am married.';zh='可以用簡單句介紹家人。'}
-  break}
+  const r=familyIntroResult(s,f);if(r){({en,zh,pending,child,knownAge}=r)}break}
  case 'family_age':{
-  const a=explicitAge||age||(s.includes('thirteen')?'13':null);if(a&&Number(a)>0&&Number(a)<100){en=`My daughter is ${a} years old.`;zh=`我個女今年 ${a} 歲。`;pending={daughterAge:a}}break}
- case 'family_weekend':{let act='';if(/church/.test(s))act='go to church';else if(/shop/.test(s))act='go shopping';else if(/park/.test(s))act='go to the park';else if(/cook/.test(s))act='cook';else if(/walk/.test(s))act='go for a walk';if(act){en=`At weekends, I usually ${act}${/family/.test(s)?' with my family':''}.`;zh='用 At weekends, I usually... 講習慣。'}break}
+  const a=ageValue(s);if(a){const isSon=dialog?.answers.family_intro?.child==='son';en=`My ${isSon?'son':'daughter'} is ${a} years old.`;zh=`我個${isSon?'仔':'女'}今年 ${a} 歲。`;if(!isSon)pending={daughterAge:a}}break}
+ case 'family_weekend':{let act='';if(/church/.test(s))act='go to church';else if(/shop/.test(s))act='go shopping';else if(/park/.test(s))act='go to the park';else if(/cook/.test(s))act='cook';else if(/walk/.test(s))act='go for a walk';if(act){en=`At weekends, I usually ${act}${/family/.test(s)?' with my family':''}.`;zh='用 At weekends, I usually... 講習慣。';activity=/church/.test(s)?'church':act}break}
  case 'family_why': case 'entertainment_why':case 'music_why':case 'occasion_why':case 'transport_why':{
    let reason='';if(/relax|calm|peaceful/.test(s))reason='it is relaxing';else if(/friend/.test(s))reason='I can meet my friends';else if(/family/.test(s))reason='I can spend time with my family';else if(/happy|fun/.test(s))reason='it makes me happy';else if(/convenient|easy/.test(s))reason='it is convenient';else if(/cheap|save money/.test(s))reason='it is affordable';if(reason){en=`I like it because ${reason}.`;zh='because 後面加原因，就可以將答案講完整。'}break}
  case 'transport_how':{
@@ -105,13 +130,35 @@ function build(q,input){const s=norm(input);const f=state.facts;let en='',zh='',
  case 'life_where':{const place=firstMatch(s,/(london|manchester|birmingham|leeds|liverpool|kingston|bristol)/);if(place){en=`I live in ${capPlace(place)}.`;zh='I live in... 可以講居住地方。'}break}
  case 'life_like':{if(/park/.test(s)){en='I like the parks near my home.';zh='用 I like... 講你真實喜歡的地方。'}break}
  }
- if(!en&&s.startsWith('i ')&&s.length>5){en=input.trim().replace(/[.!?]*$/,'.');zh='你已經有完整句子嘅開頭。可以再加時間、地方或者原因。'}
- if(!en){return {ok:false,sample:q.sample,zh:'呢個免費版本未能可靠理解你呢句。試下用英文關鍵字，或者參考上面嘅示範句；App 唔會亂估你嘅個人資料。'}}
- return {ok:true,en,zh,pending};
+ // Do not treat arbitrary sentences starting with 'I' as an answer to an unrelated question.
+ if(!en){return {ok:false,zh:understandingFeedback(input)}}
+ return {ok:true,en,zh,pending,child,knownAge,activity};
 }
 function capPlace(x){return x.replace(/\b\w/g,c=>c.toUpperCase()).replace(/^A Park$/,'a park').replace(/^The Park$/,'the park')}
-function renderCoach(result,q){const box=el('div','coach-block');box.append(el('strong','',result.ok?'✨ 按你嘅答案建議':'💡 試下呢個示範句型'));box.append(el('div','answer-en',result.ok?result.en:result.sample));box.append(el('p','',result.zh));const actions=el('div','coach-actions');const en=result.ok?result.en:result.sample;actions.append(btn('🔊 聆聽',()=>speak(en)));if(result.ok){actions.append(btn('♡ 收藏句子',()=>saveSentence(en,q.zh)));if(result.pending)actions.append(btn('✓ 確認並記住資料',()=>{Object.assign(state.facts,result.pending);persist();notify('已記住你確認嘅個人資料');renderMemory()},'confirm-memory'));}actions.append(btn('跟住講下一題 →',()=>{if(!dialog)return;actions.querySelectorAll('button').forEach(b=>b.disabled=true);dialog.index++;askQuestion()}));box.append(actions);byId('chat-window').append(box);scrollChat()}
-function submitPractice(){if(!dialog)startDialogue(byId('topic-choice').value);if(!dialog.awaiting){notify('請按「跟住講下一題」繼續對話');return}const input=byId('user-answer').value.trim();if(!input){notify('請先講或者輸入一句英文');return}const q=currentQuestion();appendMessage('student',input);byId('user-answer').value='';const result=build(q,input);dialog.turns++;dialog.awaiting=false;renderCoach(result,q);if(dialog.turns===1){state.sessions++;}if(!state.touched.includes(dialog.topicId))state.touched.push(dialog.topicId);persist();}
+function repeatCurrentQuestion(){if(!dialog)return;const q=currentQuestion();appendMessage('coach',q.en,q.zh);speak(q.en)}
+function showExample(q){const box=el('div','coach-block');box.append(el('strong','','參考例子（唔代表你嘅真實資料）'),el('div','answer-en',q.sample));box.append(btn('🔊 聆聽',()=>speak(q.sample)));byId('chat-window').append(box);scrollChat()}
+function nextQuestion(){if(!dialog)return;dialog.index++;const q=topic(dialog.topicId).questions;const intro=dialog.answers.family_intro;
+ // Don't ask a child-age question when the learner said they have no children,
+ // or already told us the daughter's age in the previous answer.
+ if(dialog.topicId==='family'&&dialog.index===1&&(intro?.child==='none'||intro?.child==='none-mentioned'||intro?.knownAge))dialog.index++;
+ if(dialog.index>=q.length){appendMessage('coach','Well done! You have finished this practice topic. You can choose another topic or start again.','完成呢個話題！可以轉主題，或者重新練習。');dialog.awaiting=false;byId('user-answer').disabled=true;byId('send-answer').disabled=true;byId('mic-button').disabled=true;return}
+ dialog.lastQuestion=null;askQuestion();}
+function renderCoach(result,q){const box=el('div','coach-block');
+ if(result.ok){box.append(el('strong','','✨ 我用你嘅關鍵字砌咗一句建議'),el('div','answer-en',result.en),el('p','',result.zh));const actions=el('div','coach-actions');actions.append(btn('🔊 聆聽再講',()=>{speak(result.en);byId('user-answer').focus()}));actions.append(btn('♡ 收藏',()=>saveSentence(result.en,q.zh)));
+ if(result.pending)actions.append(btn('✓ 確認並記住資料',()=>{Object.assign(state.facts,result.pending);persist();notify('已記住你確認嘅個人資料');renderMemory()},'confirm-memory'));
+ actions.append(btn('下一個問題 →',nextQuestion,'next-question'));box.append(actions);
+ }else{box.classList.add('not-understood');box.append(el('strong','','未能理解（唔會亂答）'),el('p','',result.zh));const actions=el('div','coach-actions');actions.append(btn('↻ 再答一次',()=>{dialog.awaiting=true;byId('user-answer').focus();notify('請試下簡單英文關鍵字')}));actions.append(btn('睇例句',()=>showExample(q)));actions.append(btn('略過 →',nextQuestion));box.append(actions)}
+ byId('chat-window').append(box);scrollChat();}
+function respondToIntent(intent,input){const q=currentQuestion();appendMessage('student',input);byId('user-answer').value='';const box=el('div','coach-block intent-reply');
+ if(intent==='audio-check'){box.append(el('strong','','我收到你嘅說話內容'),el('p','',`畫面收到：「${input}」。如果你係用咪高峰，代表手機已轉成文字；但唔等於句型引擎真正明白所有說話。`),el('div','answer-en',`Can you hear what I'm saying?`),el('p','','如果你想問「你聽唔聽到我講嘢？」，可以咁講。'));box.append(btn('🔊 聽正確講法',()=>speak(`Can you hear what I'm saying?`)));}
+ if(intent==='repeat'){box.append(el('strong','','可以，我再講一次。'),el('p','',q.en));speak(q.en)}
+ if(intent==='help'){box.append(el('strong','','你可以試試咁答'),el('div','answer-en',q.sample),el('p','','呢個只係例句，唔係你嘅真實資料。'))}
+ if(intent==='greeting'){box.append(el('strong','','Hello!'),el('p','',`Let’s practise. ${q.en}`));}
+ box.append(btn('繼續回答原本問題',()=>{byId('user-answer').focus()},'next-question'));
+ byId('chat-window').append(box);scrollChat();}
+function submitPractice(){if(!dialog)startDialogue(byId('topic-choice').value);if(!dialog.awaiting){notify('請按「下一個問題」或「再答一次」');return}const input=byId('user-answer').value.trim();if(!input){notify('請先講或者輸入一句英文');return}const intent=conversationalIntent(input);if(intent){respondToIntent(intent,input);return}const q=currentQuestion();appendMessage('student',input);byId('user-answer').value='';const result=build(q,input);if(result.ok)dialog.turns++;dialog.awaiting=!result.ok;
+ if(result.ok)dialog.answers[q.id]=result;
+ renderCoach(result,q);if(result.ok){if(dialog.turns===1)state.sessions++;if(!state.touched.includes(dialog.topicId))state.touched.push(dialog.topicId);persist()}}
 function saveSentence(en,zh){if(state.saved.some(x=>x.en===en)){notify('呢句已經喺收藏');return}state.saved.push({en,zh});if(persist())notify('句子已經收藏 ♡')}
 function renderMemory(){byId('saved-count').textContent=state.saved.length+' 句';const list=byId('sentence-list');list.replaceChildren();if(!state.saved.length)list.append(el('div','empty-state','未有收藏句子。去「句子教練」試講一句啦！'));state.saved.forEach((s,i)=>{const row=el('div','sentence-row'),box=el('div');box.append(el('strong','',s.en),el('small','',s.zh));row.append(box,btn('🔊',()=>speak(s.en)),btn('刪除',()=>{state.saved.splice(i,1);persist();renderMemory()}));list.append(row)});const facts=byId('facts-list');facts.replaceChildren();for(const [key,label] of FACT_FIELDS){const row=el('div','fact-row');row.append(el('label','',label));const inp=el('input');inp.value=state.facts[key]||'';inp.setAttribute('aria-label',label);inp.placeholder='尚未記錄';inp.addEventListener('change',()=>{const v=inp.value.trim().slice(0,70);if(v)state.facts[key]=v;else delete state.facts[key];persist();notify('已更新個人資料')});row.append(inp);facts.append(row)}}
 function getVoices(){if(!('speechSynthesis' in window))return[];return speechSynthesis.getVoices().filter(v=>v.lang&&v.lang.toLowerCase().startsWith('en'))}
@@ -119,7 +166,7 @@ function renderVoiceOptions(){voices=getVoices();const sel=byId('voice-specific'
 function renderSettings(){byId('voice-gender').value=state.voiceGender;byId('speech-rate').value=state.rate;byId('rate-value').textContent=Number(state.rate).toFixed(2)+'×';renderVoiceOptions()}
 function pickVoice(){let v=voices.find(x=>x.name===state.voiceName);if(v)return v;const brit=voices.filter(v=>/en[-_]GB/i.test(v.lang));const pool=brit.length?brit:voices;const male=/male|daniel|george|ryan|oliver|arthur|james|brian|thomas/i;const female=/female|serena|kate|susan|samantha|emma|libby|hazel|sonia|sophie/i;return pool.find(x=>(state.voiceGender==='male'?male:female).test(x.name))||pool[0]||null}
 function speak(text){if(!('speechSynthesis' in window)){notify('呢個瀏覽器唔支援英文語音朗讀');return}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=state.rate;const v=pickVoice();if(v)u.voice=v;speechSynthesis.speak(u)}
-function startMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){notify('此瀏覽器唔支援語音辨識，仍然可以輸入英文練習');return}if(mic){try{mic.stop()}catch{};mic=null;return}try{const rec=new SR();rec.lang='en-GB';rec.interimResults=false;rec.continuous=false;rec.maxAlternatives=1;mic=rec;byId('mic-status').textContent='正在聽你講英文…';byId('mic-button').textContent='■ 停止收音';rec.onresult=e=>{const txt=e.results?.[0]?.[0]?.transcript||'';byId('user-answer').value=txt;byId('mic-status').textContent='已辨識，可以修改再提交'};rec.onerror=e=>{notify('語音辨識失敗：'+(e.error||'請重試')+'。亦可以改用打字')};rec.onend=()=>{mic=null;byId('mic-button').textContent='🎙️ 語音輸入';if(byId('mic-status').textContent.startsWith('正在'))byId('mic-status').textContent='已停止收音'};rec.start()}catch{mic=null;notify('無法啟動咪高峰，請檢查權限')}}
+function startMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){notify('此瀏覽器唔支援語音辨識，仍然可以輸入英文練習');return}if(mic){try{mic.stop()}catch{};mic=null;return}try{const rec=new SR();rec.lang='en-GB';rec.interimResults=false;rec.continuous=false;rec.maxAlternatives=1;mic=rec;byId('mic-status').textContent='正在聽你講英文…';byId('mic-button').textContent='■ 停止收音';rec.onresult=e=>{const txt=e.results?.[0]?.[0]?.transcript||'';byId('user-answer').value=txt;byId('mic-status').textContent='已轉文字，請按提交（未必理解）'};rec.onerror=e=>{notify('語音辨識失敗：'+(e.error||'請重試')+'。亦可以改用打字')};rec.onend=()=>{mic=null;byId('mic-button').textContent='🎙️ 語音輸入';if(byId('mic-status').textContent.startsWith('正在'))byId('mic-status').textContent='已停止收音'};rec.start()}catch{mic=null;notify('無法啟動咪高峰，請檢查權限')}}
 function shuffledTwo(){const a=[...OFFICIAL];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,2)}
 function createMock(){const prepared=byId('mock-prepared').value;const topics=[prepared,...shuffledTwo()];const questions=topics.flatMap(id=>topic(id).questions.slice(0,id===prepared?4:3).map(q=>({...q,topicId:id})));mock={questions,at:0,answers:[],started:Date.now(),finished:false};renderMock();speak(questions[0].en);mockTicker=setInterval(()=>{if(mock&&!mock.finished){if(Date.now()-mock.started>=600000){finishMock();return}const time=byId('mock-clock');if(time)time.textContent=clock(600000-(Date.now()-mock.started))}},1000)}
 function clock(ms){let sec=Math.max(0,Math.floor(ms/1000));return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`}
