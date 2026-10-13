@@ -18,3 +18,23 @@ jobs:
         run: python -m compileall -q desktop
       - name: Unit tests with a mocked local model
         run: python -m unittest discover -s desktop/tests -v
+  windows-exe:
+    needs: desktop-tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Windows packager
+        run: python -m pip install --disable-pip-version-check pyinstaller
+      - name: Build Windows launcher with web assets
+        shell: pwsh
+        run: python -m PyInstaller --noconfirm --clean --onefile --name B1-Gong-Dak-PC --add-data 'desktop/index.html;.' --add-data 'desktop/styles.css;.' --add-data 'desktop/app.js;.' desktop/server.py
+      - name: Upload Windows test app
+        uses: actions/upload-artifact@v4
+        with:
+          name: b1-gong-dak-windows-test-exe
+          path: dist/B1-Gong-Dak-PC.exe
+          if-no-files-found: error
+          retention-days: 14
