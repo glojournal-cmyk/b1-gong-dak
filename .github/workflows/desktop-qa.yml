@@ -1,0 +1,20 @@
+name: Windows desktop AI adapter checks
+on:
+  push:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/desktop-qa.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  desktop-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python syntax
+        run: python -m compileall -q desktop
+      - name: Unit tests with a mocked local model
+        run: python -m unittest discover -s desktop/tests -v
