@@ -39,3 +39,9 @@ Model-adapter boundary: replace rule-based `build(question, input)` with an expl
 ## Notes
 
 Official exam specifications and UK immigration language requirements may change. This prototype is not affiliated with Trinity College London or the UK Government. Practise genuine interaction, not memorisation. Verify any later public course content against official requirements and licensing.
+
+## Samsung Galaxy S21 / S22 Ultra (Android)
+
+Use the latest **Chrome** as the preferred browser. Install from Chrome's menu (`Add to Home screen` / `Install app`). Open **設定 → Samsung 手機語音檢查** to see what the current browser supports. This diagnostic cannot verify microphone permissions by itself; attempt a recording in **練習** and grant microphone permission when prompted.
+
+When browser speech recognition is unavailable or fails, focus the answer field and use the **Samsung Keyboard / Gboard microphone**, *if present and enabled*, then press **提交答案**. This fallback depends on the installed keyboard and its recognition settings; do not assume every Android browser and keyboard will behave alike. Spoken audio may use network services and is not equivalent to a free-form AI conversation. Switching devices does not synchronize progress: export/import the local JSON backup if desired.
