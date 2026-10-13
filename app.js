@@ -33,7 +33,7 @@ function resetListeningView(){
   setRecordUi(false);
   el('speech-status').textContent='準備就緒。撳咪高峰後，請容許瀏覽器使用咪高峰。';
   el('spoken').textContent='你講嘅英文會顯示喺呢度。';
-  el('speech-feedback').textContent='呢個版本提供語音轉文字同示範句，暫時未能用 AI 判斷回答內容或自然追問。';
+  el('speech-feedback').textContent='AI 啟動後會教改正句，等你重試後再追問。未啟動 AI 時只會將語音轉成文字。';
 }
 function readAloud(text){
   if(!('speechSynthesis' in window)){
