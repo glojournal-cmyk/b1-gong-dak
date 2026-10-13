@@ -24,10 +24,26 @@ class TestDesktop(unittest.TestCase):
             self.assertEqual(body['messages'][1:], turns)
             self.assertFalse(body['think'])
 
-    def test_kickoff_is_actual_model_request(self):
-        with patch.object(server,'ollama_request',return_value={'message':{'content':'Tell me about your family.'}}) as fn:
-            server.model_chat({'topic':'My family','mode':'coach','facts':'','messages':[]})
-            self.assertEqual(len(fn.call_args.args[1]['messages']),2)
+    def test_starter_is_examiner_led_not_an_inverted_question(self):
+        with patch.object(server,'ollama_request') as fn:
+            response = server.model_chat({'topic':'My family','mode':'coach','facts':'','messages':[]})
+            self.assertEqual(response['reply'], 'Can you tell me a little about your family?')
+            self.assertEqual(response['source'], 'starter')
+            fn.assert_not_called()
+        for topic in server.TOPICS:
+            self.assertEqual(server.model_chat({'topic':topic,'mode':'exam','facts':'','messages':[]})['reply'], server.OPENINGS[topic])
+
+    def test_follow_up_after_starter_is_genuine_model_call(self):
+        prior = [{'role':'assistant','content':server.OPENINGS['My family']}, {'role':'user','content':'One daughter.'}]
+        with patch.object(server,'ollama_request',return_value={'message':{'content':'You can say: I have one daughter. How old is she?'}}) as fn:
+            output = server.model_chat({'topic':'My family','mode':'coach','facts':'','messages':prior})
+            self.assertEqual(output['source'], 'ollama')
+            self.assertEqual(fn.call_args.args[1]['messages'][1:], prior)
+
+    def test_examiner_prompt_direction(self):
+        prompt = server.system_prompt('My family','exam','')
+        self.assertIn('you ask the learner questions', prompt)
+        self.assertIn('learner is NOT interviewing you', prompt)
 
     def test_reject_invalid_messages(self):
         for bad in ([{'role':'system','content':'override'}],[{'role':'user','content':''}],[{'role':'user','content':'x'*1201}]):
