@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#1c302b">
 <title>B1 講得掂｜生字及句型練習</title>
-<link rel="stylesheet" href="./styles.css?v=0.6">
+<link rel="stylesheet" href="./styles.css?v=0.7">
 </head>
 <body>
 <div class="wrap">
-<header class="top"><div class="brand"><div class="mark">B<span>1</span></div><div><strong>B1 講得掂</strong><small>Trinity GESE Grade 5 · 生字及句型練習</small></div></div><span class="stage-tag">PC · v0.6 · 口語學習測試</span></header>
+<header class="top"><div class="brand"><div class="mark">B<span>1</span></div><div><strong>B1 講得掂</strong><small>Trinity GESE Grade 5 · 生字及句型練習</small></div></div><span class="stage-tag">PC · v0.7 · 口語學習測試</span></header>
 <div class="banner" role="status">口語：講英文 → 睇糾正 → 講返一次 → AI 追問。下方亦有生字、小測評分同錯題重溫。</div>
 <div class="layout"><aside class="side"><div class="eyebrow">A PERSONAL LEARNING PATH</div><h1>由幾個字，<br><em>慢慢講成一句。</em></h1><p class="explain">每日約 10–15 分鐘，由簡單回答開始，逐步學識自然對答，再練 Trinity B1 題型。</p><div class="progress-box"><div class="progress-top"><strong>五課練習進度</strong><span id="done-count">0 / 5</span></div><div class="bar"><div id="bar-fill"></div></div><small>每課六题掌握後先完成。練習分數唔代表 B1 考試成績。</small></div>
 <nav id="steps" aria-label="五級學習階段"></nav>
@@ -22,14 +22,14 @@
 <div id="speech-feedback" class="speech-feedback">呢個版本提供語音轉文字同示範句，暫時未能用 AI 判斷回答內容或自然追問。</div>
 </section><div class="answer"><div class="answer-label">學習示例（非即時 AI 回覆）</div><p id="example"></p><div id="translation" class="translation"></div></div><div class="tips"><strong>今日重點</strong><p id="tip"></p></div>
 <label class="memo-label" for="memo">你嘅回答（語音轉文字可修改；亦可以打字）</label><textarea id="memo" rows="3" placeholder="例如：I have one daughter."></textarea>
-<section class="ai-coach"><h3>自由回答：AI 糾正及追問（測試）</h3><p>AI 喺瀏覽器運行，毋須安裝軟件或付 API 費。首次需要下載模型；冇 GPU 可用 CPU，但回覆較慢。首次下載可能需要幾分鐘；AI 用簡單英文解釋糾正，生字有中文意思。模型建議仍可能有錯，現時係測試版。</p><label for="ai-device">運行方式</label> <select id="ai-device"><option value="auto">自動選擇 GPU／CPU</option><option value="cpu">CPU（毋須 GPU）</option></select><br><button id="load-ai" type="button" class="outline">啟動 AI 口語導師</button><p id="ai-status" role="status">AI 未啟動。上面六題練習可以直接使用。</p><button id="ask-ai" type="button" class="primary" disabled>糾正我嘅回答</button><button id="stop-ai" type="button" class="outline">停止 AI</button><label class="memo-label"><input id="auto-ai" type="checkbox" checked> 講完自動交畀 AI（可取消，先修改辨識文字）</label><p id="oral-score" role="status"></p><button id="restart-ai" type="button" class="outline">重新開始對話</button><div id="ai-result" aria-live="polite"></div><details><summary>我收藏嘅口語生字</summary><div id="saved-words"></div></details></section>
+<section class="ai-coach"><h3>自由回答：AI 糾正及追問（測試）</h3><p>AI 喺瀏覽器運行，毋須安裝軟件或付 API 費。首次需要下載模型；冇 GPU 可用 CPU，但回覆較慢。首次下載可能需要幾分鐘；常見句型有中文解釋，其他糾正用簡單英文；生字有中文意思。模型建議仍可能有錯，現時係測試版。</p><label for="ai-device">運行方式</label> <select id="ai-device"><option value="auto">自動選擇 GPU／CPU</option><option value="cpu">CPU（毋須 GPU）</option></select><br><button id="load-ai" type="button" class="outline">啟動 AI 口語導師</button><p id="ai-status" role="status">AI 未啟動。下方生字同六題練習可以直接使用。</p><button id="ask-ai" type="button" class="primary" disabled>糾正我嘅回答</button><button id="stop-ai" type="button" class="outline">停止 AI</button><label class="memo-label"><input id="auto-ai" type="checkbox" checked> 講完自動交畀 AI（可取消，先修改辨識文字）</label><p id="oral-score" role="status"></p><button id="restart-ai" type="button" class="outline">重新開始對話</button><div id="ai-result" aria-live="polite"></div><details><summary>我收藏嘅口語生字</summary><div id="saved-words"></div></details></section>
 <div class="lesson-actions"><button type="button" id="prev" class="outline">← 上一級</button><button type="button" id="complete" class="primary">完成今級，下一級 →</button></div></section>
 <section class="card learning-card"><div class="eyebrow">LEARN → PRACTISE → CORRECT → REVIEW</div><h2>先學今日四個生字</h2><div id="vocabulary" class="vocabulary"></div><h3>小測：生字、改錯、砌句</h3><p>先睇例句，再自己答。答錯會解釋，之後重試；首次答對與重試後掌握分開記錄。</p><strong id="learning-score" aria-live="polite"></strong><div id="drills"></div><p id="learning-save" role="status"></p></section>
 <section class="card"><h2>錯題重溫</h2><div id="review-list"></div><details><summary>備份練習紀錄</summary><button id="backup-learning" class="outline" type="button">下載備份</button><label class="memo-label" for="restore-learning">還原練習備份</label><input id="restore-learning" type="file" accept="application/json"></details></section>
 <section class="topics card"><div class="section-title compact"><div><div class="eyebrow">GESE GRADE 5 · CONVERSATION</div><h2>六個考官指定範圍</h2></div></div><p class="topic-note">真正考試只揀其中兩個，但事前要準備全部六個。點選主題睇示範問題（暫未設各主題完整課堂）。</p><div id="topic-grid" class="topic-grid"></div><div id="topic-detail" class="topic-detail" aria-live="polite"></div></section>
 <section class="card topic-form"><div class="eyebrow">PREPARED TOPIC</div><h2>自選 Topic：五個討論點</h2><p>示範可用「My job」等個人經歷主題。呢度只展示準備方式；正式應考要按 Trinity 要求填妥 Topic Form，避免直接揀六個指定 Conversation 範圍。</p><ol><li>What I do</li><li>How I started</li><li>What I like about it</li><li>One experience I remember</li><li>My plans for the future</li></ol></section>
 </main></div><footer>獨立 GitHub 開發預覽 · 無收費 AI API · 文字記錄只儲存喺本機；瀏覽器語音辨識可能使用網上服務 · 非 Trinity 官方 App</footer></div>
-<script src="./app.js?v=0.6" defer></script>
-<script src="./learning.js?v=0.6" defer></script>
-<script type="module" src="./coach.js?v=0.6"></script>
+<script src="./app.js?v=0.7" defer></script>
+<script src="./learning.js?v=0.7" defer></script>
+<script type="module" src="./coach.js?v=0.7"></script>
 </body></html>

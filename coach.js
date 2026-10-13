@@ -24,7 +24,7 @@ function workerRequest(type,messages){
 }
 function closeWorker(){if(worker)worker.terminate();worker=null;for(const job of jobs.values()){clearTimeout(job.timer);job.reject(Error('已停止 AI'))}jobs.clear()}
 async function loadCpu(){
- worker=new Worker(new URL('./coach-worker.js?v=0.6',import.meta.url),{type:'module'});
+ worker=new Worker(new URL('./coach-worker.js?v=0.7',import.meta.url),{type:'module'});
  worker.onmessage=({data})=>{const job=jobs.get(data.id);if(!job)return;if(data.type==='progress'){status(data.text);return}clearTimeout(job.timer);jobs.delete(data.id);if(data.type==='error')job.reject(Error(data.text));else job.resolve(data.text)};
  worker.onerror=()=>{for(const job of jobs.values()){clearTimeout(job.timer);job.reject(Error('CPU AI 未能載入，請檢查網絡再重試。'))}jobs.clear()};
  await workerRequest('load');
@@ -76,6 +76,20 @@ function showFeedback(answer,d){
  const next=document.createElement('button');next.type='button';next.className='outline';next.textContent='暫時跳過重試，繼續對話';next.onclick=continueConversation;box.append(next);
  pending={feedback:d};$('memo').value='';$('ask-ai').textContent='檢查我嘅重試句';status('先用咪講返改正句，或者喺文字框輸入。');readAloud(d.corrected_answer);
 }
+// Reviewed teaching hints supplement model-generated English; they do not generate answers.
+function reviewedExplanation(answer,corrected,fragment){
+ if(normalSentence(answer)===normalSentence(corrected))return '✓ 呢句已經完整，今次毋須修改。';
+ if(fragment)return '將短答變成完整句，要有主語同動詞；只保留你講過嘅資料。';
+ if(/\bi has\b/i.test(answer)&&/\bi have\b/i.test(corrected))return '主語 I 要配 have；has 用於 he / she / it。';
+ if(/\busually cooking\b/i.test(answer)&&/\busually cook\b/i.test(corrected))return 'usually 表示習慣，用一般現在式 cook；cooking 係 -ing 形式，唔係過去式。';
+ return null;
+}
+function reviewedClarification(q){
+ if(/^what is (her|his|your) name\?$/i.test(q)){return q.replace(/ name\?$/i,' first name?')}
+ if(/^how old is .+\?$/i.test(q))return q.replace(/\?$/,' now?');
+ if(/tell me about your family/i.test(q))return 'Who is in your family?';
+ return null;
+}
 async function submitAnswer(){
  if(!engine||busy)return;
  const answer=$('memo').value.trim();if(!answer){status('請先用咪講英文，或輸入回答。');return}
@@ -91,7 +105,7 @@ async function submitAnswer(){
   const running=engine;
   const ask=(instruction,text)=>running.generate([{role:'system',content:instruction},{role:'user',content:text}],true);
   if(clarification){
-   const raw=await ask(clarifySystem,q);
+   const raw=reviewedClarification(q)||await ask(clarifySystem,q);
    if(token!==session)return;
    const question=raw.trim().replace(/^["“]|["”]$/g,'');
    if(question.length>240||!question.endsWith('?'))throw Error('AI 未有提供清楚問題');
@@ -105,10 +119,10 @@ async function submitAnswer(){
    ? 'Write a complete English sentence answering the question, using ONLY the supplied short answer. Do not invent any details. Output only the sentence. Example: Question: Tell me about your family? Answer: One son. Output: I have one son.'
    : 'Correct the English grammar. Output only the corrected English sentence. Keep the meaning. Do not translate, explain or add any new facts.',fragment?'Question: '+q+'\nAnswer: '+answer:answer);
   if(token!==session)return;
-  const explanation=normalSentence(corrected)===normalSentence(answer)?'Your sentence is correct.':await ask('Explain ONE grammar improvement from Original to Corrected in one short simple English sentence. Explain only; do not translate or add facts.','Original: '+answer+'\nCorrected: '+corrected);
+  const explanation=reviewedExplanation(answer,corrected,fragment)||await ask('Explain ONE grammar improvement from Original to Corrected in one short simple English sentence. Explain only; do not translate or add facts.','Original: '+answer+'\nCorrected: '+corrected);
   if(token!==session)return;
   const conversation=history.map(x=>(x.role==='user'?'Learner: ':'Tutor: ')+x.content).join('\n');
-  const follow=await ask('You are an English tutor. Ask ONE short easy related follow-up question about the learner last answer. Do not repeat an earlier question. Output only your question.',conversation+'\nTutor: '+q+'\nLearner: '+answer);
+  const follow=await ask('You are an English tutor. Address the learner as you; if they say we, address them as you and your family. Ask ONE short easy related follow-up question about the learner last answer. Do not repeat an earlier question. Output only your question.',conversation+'\nTutor: '+q+'\nLearner: '+answer);
   if(token!==session)return;
   const d=validateFeedback(JSON.stringify({corrected_answer:corrected.trim(),explanation:explanation.trim(),follow_up:follow.trim()}));
   // Never accept added numeric facts in a correction, even if the JSON is valid.
