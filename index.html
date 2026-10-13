@@ -8,14 +8,22 @@
 <body>
 <div class="wrap">
 <header class="top"><div class="brand"><div class="mark">B<span>1</span></div><div><strong>B1 講得掂</strong><small>Trinity GESE Grade 5 · 學習路線預覽</small></div></div><span class="stage-tag">教學設計試用版</span></header>
-<div class="banner" role="status"><strong>目前可試：</strong> 五級學習流程、主題、例句、朗讀及本機進度。<strong>尚未接入：</strong> Grok 真人式 AI 語音對話。 <a href="https://hds-xluoh4mpqybu-6014-sye05.grok-code-wild.hades-www.grok-sandbox.com/" target="_blank" rel="noopener noreferrer">試原本 Grok 語音版 ↗</a></div>
+<div class="banner" role="status"><strong>目前可試：</strong> 五級學習流程、英文問題朗讀、咪高峰口語跟讀（視乎瀏覽器）、主題及進度。<strong>尚未接入：</strong> Grok 真人式 AI 語音對話。 <a href="https://hds-xluoh4mpqybu-6014-sye05.grok-code-wild.hades-www.grok-sandbox.com/" target="_blank" rel="noopener noreferrer">試原本 Grok 語音版 ↗</a></div>
 <div class="layout"><aside class="side"><div class="eyebrow">A PERSONAL LEARNING PATH</div><h1>由幾個字，<br><em>慢慢講成一句。</em></h1><p class="explain">每日約 10–15 分鐘，由簡單回答開始，逐步學識自然對答，再練 Trinity B1 題型。</p><div class="progress-box"><div class="progress-top"><strong>課程預覽進度</strong><span id="done-count">0 / 5</span></div><div class="bar"><div id="bar-fill"></div></div><small>只代表呢五個示範單元已完成，唔係 B1 合格分數。</small></div>
 <nav id="steps" aria-label="五級學習階段"></nav>
 <button class="reset" id="reset" type="button">↻ 重設示範進度</button></aside>
 <main class="main"><div class="section-title"><div><div class="eyebrow">YOUR NEXT STEP</div><h2 id="step-title">Speak a Sentence</h2><p id="step-subtitle"></p></div><span class="count-pill" id="step-count">LEVEL 01 / 05</span></div>
-<section class="lesson card"><div class="lesson-head"><span id="lesson-kicker">練習例子</span><button type="button" id="speak" class="outline">🔊 聆聽英文</button></div><div class="coach"><div class="coach-label">AI 導師應該點教你</div><p id="coach-q"></p></div><div class="answer"><div class="answer-label">學習示例（非即時 AI 回覆）</div><p id="example"></p><div id="translation" class="translation"></div></div><div class="tips"><strong>今日重點</strong><p id="tip"></p></div><label class="memo-label" for="memo">用自己嘅例子寫一句英文（只會存喺呢個瀏覽器）</label><textarea id="memo" rows="3" placeholder="例如：I have one daughter."></textarea><div class="lesson-actions"><button type="button" id="prev" class="outline">← 上一級</button><button type="button" id="complete" class="primary">完成今級，下一級 →</button></div></section>
+<section class="lesson card"><div class="lesson-head"><span id="lesson-kicker">練習例子</span><button type="button" id="speak" class="outline">🔊 聽問題</button></div><div class="coach"><div class="coach-label">AI 導師應該點教你</div><p id="coach-q"></p></div><div class="answer"><div class="answer-label">學習示例（非即時 AI 回覆）</div><p id="example"></p><div id="translation" class="translation"></div></div><div class="tips"><strong>今日重點</strong><p id="tip"></p></div><section class="voice-practice" aria-label="英文口語練習">
+<div class="voice-head"><strong>開口講英文</strong><span class="voice-flag">口語跟讀 · 非 AI 對話</span></div>
+<p class="voice-description">先撳「聽問題」，再撳咪高峰直接回答。成功收音後會顯示你講咗嘅文字，方便同例句比較。</p>
+<div class="voice-buttons"><button type="button" id="record" class="mic-button" aria-pressed="false">🎙️ 撳呢度講英文</button><button type="button" id="hear-example" class="outline">🔊 聽完整例句</button></div>
+<div id="speech-status" class="speech-status" role="status" aria-live="polite">準備就緒。撳咪高峰後，請容許瀏覽器使用咪高峰。</div>
+<div id="spoken" class="spoken" aria-live="polite">你講嘅英文會顯示喺呢度。</div>
+<div id="speech-feedback" class="speech-feedback">呢個版本提供語音轉文字同示範句，暫時未能用 AI 判斷回答內容或自然追問。</div>
+</section>
+<label class="memo-label" for="memo">你嘅回答（語音轉文字可修改；亦可以打字）</label><textarea id="memo" rows="3" placeholder="例如：I have one daughter."></textarea><div class="lesson-actions"><button type="button" id="prev" class="outline">← 上一級</button><button type="button" id="complete" class="primary">完成今級，下一級 →</button></div></section>
 <section class="topics card"><div class="section-title compact"><div><div class="eyebrow">GESE GRADE 5 · CONVERSATION</div><h2>六個考官指定範圍</h2></div></div><p class="topic-note">真正考試只揀其中兩個，但事前要準備全部六個。點選主題睇示範問題。</p><div id="topic-grid" class="topic-grid"></div><div id="topic-detail" class="topic-detail" aria-live="polite"></div></section>
 <section class="card topic-form"><div class="eyebrow">PREPARED TOPIC</div><h2>自選 Topic：五個討論點</h2><p>示範可用「My job」等個人經歷主題。呢度只展示準備方式；正式應考要按 Trinity 要求填妥 Topic Form，避免直接揀六個指定 Conversation 範圍。</p><ol><li>What I do</li><li>How I started</li><li>What I like about it</li><li>One experience I remember</li><li>My plans for the future</li></ol></section>
-</main></div><footer>獨立 GitHub 開發預覽 · 無收費 AI API · 不會上傳輸入內容 · 非 Trinity 官方 App</footer></div>
+</main></div><footer>獨立 GitHub 開發預覽 · 無收費 AI API · 文字記錄只儲存喺本機；瀏覽器語音辨識可能使用網上服務 · 非 Trinity 官方 App</footer></div>
 <script src="./app.js" defer></script>
 </body></html>
