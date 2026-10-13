@@ -1,0 +1,23 @@
+name: B1 Grok curriculum review tests
+on:
+  push:
+    branches: [grok-curriculum-review-20261013]
+    paths: ['grok-curriculum/**', '.github/workflows/grok-curriculum-review.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  curriculum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Seven offline B1 curriculum tests (no API calls)
+        run: node --experimental-strip-types --test grok-curriculum/tests/*.test.mjs
+      - name: Check original audio code is not being deployed
+        run: |
+          test -f grok-curriculum/patches/src/lib/tutor.functions.ts
+          grep -q 'B1_ALLOW_BILLED_XAI' grok-curriculum/patches/src/lib/tutor.functions.ts
+          echo "Review files only. No production deployment or paid AI request."
