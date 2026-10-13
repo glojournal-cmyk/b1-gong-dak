@@ -14,12 +14,12 @@
   <div class="app-shell">
     <header class="topbar">
       <a class="identity" href="#home" aria-label="B1 講得掂首頁"><span class="mark" aria-hidden="true">b<span>1</span></span><span><b>B1 講得掂</b><small>Speak with confidence</small></span></a>
-      <span class="privacy-label">🔒 無需付費 API</span>
+      <span class="privacy-label">v0.2 · 免費句型練習</span>
     </header>
     <main id="main">
       <section id="view-home" class="view active" aria-labelledby="home-title">
         <div class="hero">
-          <div class="hero-copy"><div class="eyebrow">HELLO, SPEAKER ✨</div><h1 id="home-title">一日一句，<br><em>慢慢講得掂。</em></h1><p>由幾個英文生字開始，練到可以自然回答 B1 考官問題。</p><button class="primary" id="start-practice">開始今日練習 <span>→</span></button></div>
+          <div class="hero-copy"><div class="eyebrow">HELLO, SPEAKER ✨</div><h1 id="home-title">一日一句，<br><em>慢慢講得掂。</em></h1><p>由幾個英文生字開始砌完整句子。第一版係有限題型練習，並非自由對話 AI。</p><button class="primary" id="start-practice">開始今日練習 <span>→</span></button></div>
           <div class="hero-art" aria-hidden="true"><div class="halo"></div><div class="bubble b1">Hello!</div><div class="character"><div class="hair-back"></div><div class="face"><div class="eyes">•  •</div><div class="smile">⌣</div></div><div class="body"></div></div><div class="bubble b2">You can do it! ♡</div></div>
         </div>
         <section class="panel overview"><div class="panel-title"><h2>你的進度</h2><span class="muted">儲存在這部裝置</span></div><div class="stats"><div><strong id="stat-sessions">0</strong><small>練習次數</small></div><div><strong id="stat-sentences">0</strong><small>已收藏句子</small></div><div><strong id="stat-topics">0/7</strong><small>接觸過主題</small></div></div></section>
@@ -32,10 +32,10 @@
         </div>
       </section>
       <section id="view-practice" class="view" aria-labelledby="practice-title">
-        <div class="page-heading"><span class="eyebrow">SPEAKING COACH</span><h1 id="practice-title">慢慢講，唔使怕。</h1><p>有提示的真正輪流問答示範。你講幾個英文單字，我哋幫你砌成完整句子。</p></div>
+        <div class="page-heading"><span class="eyebrow">SPEAKING COACH</span><h1 id="practice-title">慢慢講，唔使怕。</h1><p>免費句型對話練習：你講關鍵字，我哋幫你砌句子。只理解預設範圍，唔係自由對話 AI。</p></div>
         <div class="practice-config"><label for="topic-choice">練習主題</label><select id="topic-choice"></select><label for="help-level">提示模式</label><select id="help-level"><option value="full">完整句子提示</option><option value="keywords">關鍵字提示</option><option value="none">獨立回答</option></select></div>
         <div class="chat-window" id="chat-window" aria-live="polite"><div class="conversation-placeholder">點擊「開始對話」便可練習 🌷</div></div>
-        <div class="answer-panel"><div class="answer-heading"><label for="user-answer">你會點樣答？</label><span id="mic-status" class="muted" role="status">可以打字或試用咪高峰</span></div><textarea id="user-answer" rows="2" placeholder="例如：one daughter / bus / go shopping"></textarea><div class="answer-actions"><button class="button-outline" id="mic-button" aria-label="用咪高峰講英文">🎙️ 語音輸入</button><button class="primary" id="send-answer">提交答案 →</button></div><p class="hint-note">本版本以規則句型作建議，並非真正生成式 AI。語音識別視乎瀏覽器，可能使用網上服務。</p></div>
+        <div class="answer-panel"><div class="answer-heading"><label for="user-answer">你會點樣答？</label><span id="mic-status" class="muted" role="status">可以打字或試用咪高峰</span></div><textarea id="user-answer" rows="2" placeholder="例如：one daughter / bus / go shopping"></textarea><div class="answer-actions"><button class="button-outline" id="mic-button" aria-label="用咪高峰講英文">🎙️ 語音輸入</button><button class="primary" id="send-answer">提交答案 →</button></div><p class="hint-note">本版本唔係自由對話 AI。咪高峰只負責將說話轉成文字；能否理解由免費句型引擎決定。</p></div>
         <div class="practice-footer"><button class="button-quiet" id="new-dialogue">↻ 開始新對話</button><button class="button-quiet" id="repeat-question">🔊 重讀問題</button></div>
       </section>
       <section id="view-topics" class="view" aria-labelledby="topics-title"><div class="page-heading"><span class="eyebrow">EXAM TOPICS</span><h1 id="topics-title">認識考試主題</h1><p>GESE Grade 5：自選一個 Topic，再練習六個指定 Conversation 範圍。考官會從六個範圍中選兩個。</p></div><div id="topic-list" class="topic-list"></div></section>
