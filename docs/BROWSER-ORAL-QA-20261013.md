@@ -1,11 +1,17 @@
-# B1 browser oral learning — 13 October 2026
+# B1 browser oral learning QA — 13 October 2026
 
-Implemented: speaking section first; local GPU or CPU model loading; speech-final auto submission with manual opt-out; correction → learner repetition → follow-up; reviewed lesson vocabulary collection; local oral retry counts. Objective drill scores remain separate from AI suggestions and pronunciation.
+## Implemented
+Speaking section first; local GPU/CPU inference; microphone final-result auto submission with opt-out; correction → repetition → follow-up; reviewed Chinese hints for common mistakes; reviewed course vocabulary collection; local practice and oral repetition counts. No paid AI API or APK work.
 
-Regression checks: 30 objective drills, lesson completion gating, persistence, wrong-answer review, oral retry flow, vocabulary saving, automatic submission, stale lesson responses, invalid output retention, stop controls and reviewed clarification/grammar hints passed in jsdom. Run from preview with jsdom installed: node qa-dom.cjs; node qa-coach.cjs. Model output in these tests is mocked.
+## Verified
+30 objective exercises, persistence, wrong-answer review and lesson completion gating passed jsdom regression. Mocked oral tests passed retry → follow-up, word saving, automatic submission, stale lesson responses, malformed output retention, stop controls, pronoun-preserving clarification and common grammar explanations. Run preview/qa-dom.cjs and preview/qa-coach.cjs with jsdom installed.
 
-Real inference findings: Qwen 0.5B was unsuitable (missing fields, translations and invented facts). Qwen 1.5B with a single multi-task JSON prompt was also unreliable. Separate English correction tasks produced I have two sons and We usually cook together correctly, and retained already-correct answers. Native ONNX five-turn raw results are retained in qa-model-flow-results.json; they include failures, NOT an acceptance pass. Incorrect generic explanations and changed-person clarification were replaced for reviewed common patterns. Other generated feedback remains provisional.
+Real native Qwen 1.5B separate English tasks corrected I has two sons and We usually cooking together and retained valid answers. Five-turn raw native ONNX output is preserved in preview/qa-model-flow-results.json; that log includes failures and is NOT a full acceptance pass. Generic explanations and clarification initially failed; reviewed common patterns now avoid those demonstrated mistakes. Other generated explanations remain provisional.
 
-Browser findings: 0.5B ONNX actually loaded but failed answer validation. 1.5B ONNX downloaded but failed initialization in the cloud browser. CPU runtime now uses Wllama 2.3.7 + Qwen2.5-1.5B-Instruct Q4_K_M GGUF with a bounded context. Full browser startup/inference of this replacement, GPU quality, the user's real microphone, five consecutive browser turns and pedagogical acceptance remain to be verified. Do not claim this is a completed B1 oral tutor.
+Real public-site browser test: v0.8 loaded Qwen2.5-1.5B-Instruct Q4_K_M via Wllama 2.3.7, without WebGPU. It generated I have one daughter from One daughter, displayed the reviewed Chinese explanation and lesson vocabulary. This was actual model inference, not a mocked screenshot. CPU latency was too long for natural dialogue. Stopping AI restored microphone controls and retained feedback. The final v0.9 adds a two-minute inference limit and GPU-only selection; its timeout path is code-reviewed but not yet exercised live.
 
-No paid AI API was enabled. Browser speech recognition may use a browser vendor's online service. Local model downloads use public model/CDN services; learner answers are used locally. No APK work was resumed.
+## Not accepted yet
+Five consecutive browser conversation turns; GPU execution/latency/quality; real microphone recognition and playback on the user's PC; broader free-answer teaching accuracy; complete B1 syllabus coverage. Do not label this a completed B1 oral tutor. The public preview is explicitly a test version.
+
+## Rejected approaches
+0.5B multi-task prompts produced missing fields, translations, changed subjects and invented facts. Simplified 0.5B tasks corrected some grammar but follow-ups still drifted to parents: not chosen. 1.5B ONNX failed browser initialization. Wllama must be instantiated in the browser document and owns its own inference worker; the obsolete outer worker is removed.

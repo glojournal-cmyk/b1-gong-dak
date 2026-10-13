@@ -32,21 +32,22 @@ async function loadCpu(token){
   return raw.createCompletion(prompt,{nPredict:100,useCache:false,sampling:{temp:0,top_k:1,repeat_penalty:1.08}});
  }};
 }
-$('stop-ai').addEventListener('click',()=>{session++;lifecycle++;operation++;if(engine?.kind==='gpu'){engine.raw.interruptGenerate();engine.raw.unload().catch(()=>{})}else if(engine?.raw?.exit){engine.raw.exit().catch(()=>{})}engine=null;loading=false;busy=false;pending=null;$('load-ai').disabled=false;$('load-ai').textContent='啟動 AI 口語導師';$('ask-ai').disabled=true;$('record').disabled=false;status('已停止 AI；你嘅回答同練習紀錄仍然保留。')});
+$('stop-ai').addEventListener('click',()=>{session++;lifecycle++;operation++;if(pending&&!$('memo').value.trim()){$('memo').value=pending.answer||'';$('memo').dispatchEvent(new Event('input',{bubbles:true}))}if(engine?.kind==='gpu'){engine.raw.interruptGenerate();engine.raw.unload().catch(()=>{})}else if(engine?.raw?.exit){engine.raw.exit().catch(()=>{})}engine=null;loading=false;busy=false;pending=null;$('load-ai').disabled=false;$('load-ai').textContent='啟動 AI 口語導師';$('ask-ai').disabled=true;$('ask-ai').textContent='糾正我嘅回答';$('record').disabled=false;status('已停止 AI；你嘅回答同練習紀錄仍然保留。')});
 $('load-ai').addEventListener('click',async()=>{
  if(engine||loading)return;
  const token=lifecycle;loading=true;$('load-ai').disabled=true;
  try{
   let adapter=null;
-  if($('ai-device').value==='auto'&&navigator.gpu){try{adapter=await navigator.gpu.requestAdapter()}catch{}}
+  if($('ai-device').value!=='cpu'&&navigator.gpu){try{adapter=await navigator.gpu.requestAdapter()}catch{}}
+  if(!adapter&&$('ai-device').value==='gpu')throw Error('呢個瀏覽器未提供可用 GPU。');
   if(adapter){
    try{
     status('載入電腦 GPU AI，首次需要下載模型…');
     const webllm=await import('https://esm.run/@mlc-ai/web-llm@0.2.79');
     const raw=await webllm.CreateMLCEngine(model,{initProgressCallback:p=>{if(token===lifecycle)status(p.text)}});
     if(token!==lifecycle){await raw.unload();return}
-    engine={kind:'gpu',raw,generate:async (messages,plain=false)=>{const r=await raw.chat.completions.create({messages,temperature:0.2,max_tokens:400,...(plain?{}:{response_format:{type:'json_object'}})});return r.choices[0]?.message?.content||''}};
-   }catch(e){if(token!==lifecycle)return;status('GPU 未能啟動，改用 CPU AI…');engine=await loadCpu(token)}
+    engine={kind:'gpu',raw,generate:async (messages,plain=false)=>{const r=await raw.chat.completions.create({messages,temperature:0.2,max_tokens:100,...(plain?{}:{response_format:{type:'json_object'}})});return r.choices[0]?.message?.content||''}};
+   }catch(e){if(token!==lifecycle)return;if($('ai-device').value==='gpu')throw e;status('GPU 未能啟動，改用 CPU AI…');engine=await loadCpu(token)}
   }else{status('載入 CPU AI，唔需要 GPU。首次下載模型，請保持頁面開啟…');engine=await loadCpu(token)}
   if(token!==lifecycle){engine=null;return}
   status(`AI 已就緒（${engine.kind==='cpu'?'CPU：回覆會較慢':'GPU'}）。先聽問題，再用咪回答。小模型建議仍需要核對。`);
@@ -76,7 +77,7 @@ function showFeedback(answer,d){
  const word=document.createElement('button');word.type='button';word.className='outline';word.textContent='＋ 收藏呢個生字';word.onclick=()=>{if(!d.new_word.trim())return;if(!oral.words.some(x=>x.word.toLowerCase()===d.new_word.toLowerCase())){oral.words.push({word:d.new_word,meaning:d.meaning,example:d.example});oral.words=oral.words.slice(-60);persistOral();renderOral()}word.textContent='✓ 已收藏'};box.append(' ',word);
  const hint=document.createElement('p');hint.textContent='撳咪講返上面嘅改正句，練一次先繼續。呢度只比較辨識到嘅字句，唔評發音。';box.append(hint);
  const next=document.createElement('button');next.type='button';next.className='outline';next.textContent='暫時跳過重試，繼續對話';next.onclick=continueConversation;box.append(next);
- pending={feedback:d};$('memo').value='';$('ask-ai').textContent='檢查我嘅重試句';status('先用咪講返改正句，或者喺文字框輸入。');readAloud(d.corrected_answer);
+ pending={feedback:d,answer};$('memo').value='';$('ask-ai').textContent='檢查我嘅重試句';status('先用咪講返改正句，或者喺文字框輸入。');readAloud(d.corrected_answer);
 }
 // Reviewed teaching hints supplement model-generated English; they do not generate answers.
 function reviewedExplanation(answer,corrected,fragment){
@@ -101,6 +102,14 @@ async function submitAnswer(){
  }
  const token=session,op=++operation,level=state.level,q=$('coach-q').textContent;
  busy=true;$('ask-ai').disabled=true;$('record').disabled=true;status('AI 正在糾正你嘅回答…');
+ const inferenceTimeout=setTimeout(()=>{
+  if(op!==operation)return;
+  session++;operation++;busy=false;
+  const old=engine;engine=null;
+  if(old?.kind==='gpu'){old.raw.interruptGenerate();old.raw.unload().catch(()=>{})}else if(old?.raw?.exit)old.raw.exit().catch(()=>{});
+  $('ask-ai').disabled=true;$('record').disabled=false;$('load-ai').disabled=false;$('load-ai').textContent='重試啟動 AI';
+  status('呢個裝置今次等候超過兩分鐘，已停止 AI。答案保留咗；CPU 速度未達口語對話要求，可嘗試 GPU 模式。');
+ },120000);
  const clarification=/\b(?:more specific|clarify|what do you mean|don[’']t understand|do not understand|repeat|say (?:it )?again)\b/i.test(answer);
  const clarifySystem='Rewrite the given question in simpler English for a beginner. Output ONE question only, ending with ?. Do not answer it. Do not add facts.';
  try{
@@ -121,9 +130,11 @@ async function submitAnswer(){
    ? 'Write a complete English sentence answering the question, using ONLY the supplied short answer. Do not invent any details. Output only the sentence. Example: Question: Tell me about your family? Answer: One son. Output: I have one son.'
    : 'Correct the English grammar. Output only the corrected English sentence. Keep the meaning. Do not translate, explain or add any new facts.',fragment?'Question: '+q+'\nAnswer: '+answer:answer);
   if(token!==session)return;
+  status('句子已整理，正在準備教學回饋…');
   const explanation=reviewedExplanation(answer,corrected,fragment)||await ask('Explain ONE grammar improvement from Original to Corrected in one short simple English sentence. Explain only; do not translate or add facts.','Original: '+answer+'\nCorrected: '+corrected);
   if(token!==session)return;
   const conversation=history.map(x=>(x.role==='user'?'Learner: ':'Tutor: ')+x.content).join('\n');
+  status('正在準備下一條追問…');
   const follow=await ask('You are an English tutor. Address the learner as you; if they say we, address them as you and your family. Ask ONE short easy related follow-up question about the learner last answer. Do not repeat an earlier question. Output only your question.',conversation+'\nTutor: '+q+'\nLearner: '+answer);
   if(token!==session)return;
   const d=validateFeedback(JSON.stringify({corrected_answer:corrected.trim(),explanation:explanation.trim(),follow_up:follow.trim()}));
@@ -134,7 +145,7 @@ async function submitAnswer(){
   oral.turns.push({question:q,answer,feedback:d,at:new Date().toISOString()});oral.turns=oral.turns.slice(-30);
   const saved=persistOral();showFeedback(answer,d);if(!saved)status('AI 已回覆，但今次紀錄未能儲存。');
  }catch(e){if(token===session)status('未能完成 AI 糾正：'+e.message+'。答案仍保留，請重試。')}
- finally{if(op===operation){busy=false;$('ask-ai').disabled=!engine;$('record').disabled=false}}
+ finally{clearTimeout(inferenceTimeout);if(op===operation){busy=false;$('ask-ai').disabled=!engine;$('record').disabled=false}}
 }
 $('ask-ai').addEventListener('click',submitAnswer);
 window.addEventListener('b1-speech-final',()=>{if($('auto-ai').checked&&engine&&!busy)submitAnswer()});
