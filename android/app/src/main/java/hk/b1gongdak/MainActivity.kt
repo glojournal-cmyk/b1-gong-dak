@@ -132,9 +132,9 @@ class MainActivity : Activity() {
 
         chatList = vertical().apply { setPadding(d(14), d(10), d(14), d(18)) }
         chatScroll = ScrollView(this).apply {
-            fillViewport = true; isVerticalScrollBarEnabled = true
+            isFillViewport = true; isVerticalScrollBarEnabled = true
             background = rounded(light, 18)
-            addView(chatList, ScrollView.LayoutParams(-1, -2))
+            addView(chatList, android.widget.FrameLayout.LayoutParams(-1, -2))
         }
         page.addView(chatScroll, LinearLayout.LayoutParams(-1, 0, 1f).apply {
             marginStart = d(12); marginEnd = d(12)
