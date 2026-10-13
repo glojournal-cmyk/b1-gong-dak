@@ -32,3 +32,14 @@ This is a scripted roleplay MVP, not an AI language model or an official Trinity
 - Answer panel remains accessible at mobile width; mobile 390 × 844 simulated Chromium flow passed without JS errors or horizontal overflow.
 - Service worker uses network-first update and offline cache fallback to reduce installed-PWA stale code.
 - Real Samsung browser speech recognition + microphone/audio playback still require device testing; simulated Chromium does **not** verify these.
+
+## v0.3 Samsung Galaxy S21 and Galaxy S22 Ultra compatibility pass (13 Oct 2026)
+- Simulated Android Chrome viewports: **360 × 800 CSS px** (Galaxy S21 reference) and **412 × 915 CSS px** (S22 Ultra reference).
+- Both passed: app initialization, device diagnostics, navigation into Practice, a **real submitted** `one daughter` turn (not just the pre-rendered sample), personalized suggested answer, no JavaScript exceptions, and no horizontal overflow.
+- Fixed a first-submission issue: opening Practice from bottom navigation could previously discard the user's first answer when starting the dialogue.
+- Added a **Settings → Samsung 手機語音檢查** panel with browser speech-recognition support, English text-to-speech, voice availability, network, and storage diagnostics.
+- If browser speech recognition is unavailable, the microphone action now focuses the text box with instructions to use **Samsung Keyboard / Gboard dictation where supported**; this is a fallback, not a claim that the keyboard always provides voice input.
+- Incoming speech recognition now cancels outgoing spoken audio to avoid having the microphone pick up the examiner; detailed error hints cover denied permissions, no speech, network, and hardware errors.
+- Retained all learning storage under `b1_gongdak_mvp_v1` (no migration or destructive clearing).
+- **Not yet tested on physical Samsung devices**: permission prompts, Korean/Hong Kong accent recognition, device-specific voice choice, real speech capture, install to home screen and interruption during long pauses. These require real-device QA.
+- The app remains **rule-based**, not free-form generative AI, and uses **zero paid model API calls**.
