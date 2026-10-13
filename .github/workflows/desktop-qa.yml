@@ -6,10 +6,15 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  issues: write
 jobs:
   desktop-tests:
     runs-on: ubuntu-latest
     steps:
+      - name: Report CI run URL in tracked AI validation issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment 1 --repo "$GITHUB_REPOSITORY" --body "PC-first desktop model adapter checks: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID (commit $GITHUB_SHA)"
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
