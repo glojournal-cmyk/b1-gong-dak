@@ -1,7 +1,6 @@
 // Real local inference. Practice scores never use a model's guessed exam grade.
 const $=id=>document.getElementById(id);
-let engine=null,worker=null,loading=false,busy=false,history=[],session=0,pending=null,requestId=0;
-const jobs=new Map();
+let engine=null,loading=false,busy=false,history=[],session=0,pending=null;
 let lifecycle=0,operation=0;
 const model='Qwen2.5-1.5B-Instruct-q4f32_1-MLC';
 const oralKey='b1-gongdak-oral-v1';
@@ -18,19 +17,22 @@ function renderOral(){
 function reset(){session++;history=[];pending=null;$('ai-result').replaceChildren();$('coach-q').textContent=steps[state.level].q;resetListeningView();$('memo').value='';status(engine?'AI 已就緒；由今課問題開始。':'AI 未啟動。')}
 $('restart-ai').addEventListener('click',reset);
 const drawWithLearning=draw;draw=function(){session++;history=[];pending=null;drawWithLearning();$('ai-result').replaceChildren();renderOral()};
-function workerRequest(type,messages){
- const id=++requestId;
- return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{jobs.delete(id);reject(Error('運行時間太長；可以停止 AI 再重試。'))},type==='load'?600000:180000);jobs.set(id,{resolve,reject,timer});worker.postMessage({id,type,messages})});
+async function loadCpu(token){
+ const root='https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.7/';
+ const {Wllama}=await import(root+'esm/index.js');
+ const raw=new Wllama({'single-thread/wllama.wasm':root+'esm/single-thread/wllama.wasm','multi-thread/wllama.wasm':root+'esm/multi-thread/wllama.wasm'});
+ await raw.loadModelFromUrl('https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf',{
+  n_ctx:1536,n_batch:64,n_ubatch:64,n_threads:1,
+  progressCallback:p=>{if(token===lifecycle)status(p.total?`下載 CPU AI：${Math.round(p.loaded/p.total*100)}%`:`下載 CPU AI：${Math.round(p.loaded/1048576)} MB`)}
+ });
+ if(token!==lifecycle){await raw.exit();throw Error('已停止 AI')}
+ // Wllama owns its inference worker; construction must occur in the browser document.
+ return {kind:'cpu',raw,generate:messages=>{
+  const prompt=messages.map(m=>`<|im_start|>${m.role}\n${m.content}<|im_end|>\n`).join('')+'<|im_start|>assistant\n';
+  return raw.createCompletion(prompt,{nPredict:100,useCache:false,sampling:{temp:0,top_k:1,repeat_penalty:1.08}});
+ }};
 }
-function closeWorker(){if(worker)worker.terminate();worker=null;for(const job of jobs.values()){clearTimeout(job.timer);job.reject(Error('已停止 AI'))}jobs.clear()}
-async function loadCpu(){
- worker=new Worker(new URL('./coach-worker.js?v=0.7',import.meta.url),{type:'module'});
- worker.onmessage=({data})=>{const job=jobs.get(data.id);if(!job)return;if(data.type==='progress'){status(data.text);return}clearTimeout(job.timer);jobs.delete(data.id);if(data.type==='error')job.reject(Error(data.text));else job.resolve(data.text)};
- worker.onerror=()=>{for(const job of jobs.values()){clearTimeout(job.timer);job.reject(Error('CPU AI 未能載入，請檢查網絡再重試。'))}jobs.clear()};
- await workerRequest('load');
- return {kind:'cpu',generate:messages=>workerRequest('generate',messages)};
-}
-$('stop-ai').addEventListener('click',()=>{session++;lifecycle++;operation++;closeWorker();if(engine?.kind==='gpu')engine.raw.interruptGenerate();engine=null;loading=false;busy=false;pending=null;$('load-ai').disabled=false;$('load-ai').textContent='啟動 AI 口語導師';$('ask-ai').disabled=true;$('record').disabled=false;status('已停止 AI；你嘅回答同練習紀錄仍然保留。')});
+$('stop-ai').addEventListener('click',()=>{session++;lifecycle++;operation++;if(engine?.kind==='gpu'){engine.raw.interruptGenerate();engine.raw.unload().catch(()=>{})}else if(engine?.raw?.exit){engine.raw.exit().catch(()=>{})}engine=null;loading=false;busy=false;pending=null;$('load-ai').disabled=false;$('load-ai').textContent='啟動 AI 口語導師';$('ask-ai').disabled=true;$('record').disabled=false;status('已停止 AI；你嘅回答同練習紀錄仍然保留。')});
 $('load-ai').addEventListener('click',async()=>{
  if(engine||loading)return;
  const token=lifecycle;loading=true;$('load-ai').disabled=true;
@@ -44,12 +46,12 @@ $('load-ai').addEventListener('click',async()=>{
     const raw=await webllm.CreateMLCEngine(model,{initProgressCallback:p=>{if(token===lifecycle)status(p.text)}});
     if(token!==lifecycle){await raw.unload();return}
     engine={kind:'gpu',raw,generate:async (messages,plain=false)=>{const r=await raw.chat.completions.create({messages,temperature:0.2,max_tokens:400,...(plain?{}:{response_format:{type:'json_object'}})});return r.choices[0]?.message?.content||''}};
-   }catch(e){if(token!==lifecycle)return;status('GPU 未能啟動，改用 CPU AI…');engine=await loadCpu()}
-  }else{status('載入 CPU AI，唔需要 GPU。首次下載模型，請保持頁面開啟…');engine=await loadCpu()}
+   }catch(e){if(token!==lifecycle)return;status('GPU 未能啟動，改用 CPU AI…');engine=await loadCpu(token)}
+  }else{status('載入 CPU AI，唔需要 GPU。首次下載模型，請保持頁面開啟…');engine=await loadCpu(token)}
   if(token!==lifecycle){engine=null;return}
   status(`AI 已就緒（${engine.kind==='cpu'?'CPU：回覆會較慢':'GPU'}）。先聽問題，再用咪回答。小模型建議仍需要核對。`);
   $('ask-ai').disabled=false;$('load-ai').textContent='AI 已就緒';
- }catch(e){if(token===lifecycle){engine=null;closeWorker();status('AI 未能啟動：'+e.message);$('load-ai').disabled=false;$('load-ai').textContent='重試啟動 AI'}}
+ }catch(e){if(token===lifecycle){engine=null;status('AI 未能啟動：'+e.message);$('load-ai').disabled=false;$('load-ai').textContent='重試啟動 AI'}}
  finally{if(token===lifecycle)loading=false}
 });
 export function validateFeedback(text){
